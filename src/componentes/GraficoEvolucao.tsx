@@ -1,0 +1,145 @@
+import { useEffect, useRef, useState } from 'react'
+import type { PontoEvolucao } from '../api/tipos'
+
+type Props = {
+  pontos: PontoEvolucao[]
+  quantidadeTimes: number
+  nomeTime: string
+}
+
+const ALTURA = 240
+const MARGEM = { topo: 16, direita: 40, base: 28, esquerda: 32 }
+
+/** Posição do time ao fim de cada rodada. O 1º lugar fica no topo. */
+export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime }: Props) {
+  const container = useRef<HTMLDivElement>(null)
+  const [largura, setLargura] = useState(0)
+  const [ativo, setAtivo] = useState<PontoEvolucao | null>(null)
+
+  useEffect(() => {
+    const elemento = container.current
+    if (!elemento) return
+    const observador = new ResizeObserver(([entrada]) => setLargura(entrada.contentRect.width))
+    observador.observe(elemento)
+    return () => observador.disconnect()
+  }, [])
+
+  if (pontos.length === 0) {
+    return <p className="px-4 py-6 text-sm text-texto-2">O gráfico aparece depois da primeira rodada.</p>
+  }
+
+  const ultimaRodada = pontos[pontos.length - 1].rodada
+  const areaLargura = Math.max(largura - MARGEM.esquerda - MARGEM.direita, 1)
+  const areaAltura = ALTURA - MARGEM.topo - MARGEM.base
+
+  const x = (rodada: number) => MARGEM.esquerda + (ultimaRodada === 1 ? 0 : ((rodada - 1) / (ultimaRodada - 1)) * areaLargura)
+  const y = (posicao: number) => MARGEM.topo + ((posicao - 1) / Math.max(quantidadeTimes - 1, 1)) * areaAltura
+
+  const linhasGrade = [1, 5, 10, 15, 20].filter((p) => p <= quantidadeTimes)
+  const passoRodadas = ultimaRodada > 20 ? 5 : ultimaRodada > 10 ? 2 : 1
+  const rodadasEixo = pontos.map((p) => p.rodada).filter((r) => r === 1 || r % passoRodadas === 0)
+  const caminho = pontos.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.rodada)},${y(p.posicao)}`).join(' ')
+  const ultimo = pontos[pontos.length - 1]
+  const destaque = ativo ?? ultimo
+
+  function aoMover(evento: React.PointerEvent<SVGRectElement>) {
+    const caixa = evento.currentTarget.getBoundingClientRect()
+    const proporcao = (evento.clientX - caixa.left) / caixa.width
+    const rodada = Math.round(1 + proporcao * (ultimaRodada - 1))
+    setAtivo(pontos.find((p) => p.rodada === rodada) ?? null)
+  }
+
+  const larguraDica = 150
+  const dicaX = Math.min(Math.max(x(destaque.rodada) - larguraDica / 2, 0), largura - larguraDica)
+
+  return (
+    <div>
+      <div ref={container} className="relative px-2 pt-2">
+        {largura > 0 && (
+          <svg
+            width={largura}
+            height={ALTURA}
+            role="img"
+            aria-label={`Posição do ${nomeTime} rodada a rodada. Após a rodada ${ultimo.rodada}: ${ultimo.posicao}º lugar.`}
+            className="block"
+          >
+            {linhasGrade.map((posicao) => (
+              <g key={posicao}>
+                <line x1={MARGEM.esquerda} x2={largura - MARGEM.direita} y1={y(posicao)} y2={y(posicao)} className="stroke-borda" strokeWidth={1} />
+                <text x={MARGEM.esquerda - 8} y={y(posicao)} dy="0.32em" textAnchor="end" className="fill-texto-3 text-[11px] tabular-nums">
+                  {posicao}º
+                </text>
+              </g>
+            ))}
+
+            {rodadasEixo.map((rodada) => (
+              <text key={rodada} x={x(rodada)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 text-[11px] tabular-nums">
+                {rodada}
+              </text>
+            ))}
+
+            {ativo && (
+              <line x1={x(ativo.rodada)} x2={x(ativo.rodada)} y1={MARGEM.topo} y2={MARGEM.topo + areaAltura} className="stroke-texto-3" strokeWidth={1} />
+            )}
+
+            <path d={caminho} fill="none" className="stroke-serie" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+
+            <circle cx={x(destaque.rodada)} cy={y(destaque.posicao)} r={5} className="fill-serie stroke-superficie" strokeWidth={2} />
+
+            {!ativo && (
+              <text x={x(ultimo.rodada) + 10} y={y(ultimo.posicao)} dy="0.32em" className="fill-texto text-xs font-semibold tabular-nums">
+                {ultimo.posicao}º
+              </text>
+            )}
+
+            <rect
+              x={MARGEM.esquerda}
+              y={0}
+              width={areaLargura}
+              height={ALTURA}
+              fill="transparent"
+              onPointerMove={aoMover}
+              onPointerLeave={() => setAtivo(null)}
+            />
+          </svg>
+        )}
+
+        {ativo && (
+          <div
+            className="pointer-events-none absolute top-0 whitespace-nowrap rounded-md border border-borda bg-superficie px-2.5 py-1.5 text-xs shadow-md"
+            style={{ left: dicaX + 8, width: larguraDica }}
+          >
+            <div className="text-texto-3">Rodada {ativo.rodada}</div>
+            <div className="font-semibold tabular-nums text-texto">
+              {ativo.posicao}º lugar · {ativo.pontos} pts
+            </div>
+          </div>
+        )}
+      </div>
+
+      <details className="border-t border-borda px-4 py-2 text-sm">
+        <summary className="cursor-pointer text-texto-2">Ver dados em tabela</summary>
+        <div className="max-h-64 overflow-y-auto">
+          <table className="mt-2 w-full text-center tabular-nums">
+            <thead className="text-xs text-texto-3">
+              <tr>
+                <th className="py-1 font-medium">Rodada</th>
+                <th className="py-1 font-medium">Posição</th>
+                <th className="py-1 font-medium">Pontos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pontos.map((p) => (
+                <tr key={p.rodada}>
+                  <td className="py-0.5">{p.rodada}</td>
+                  <td className="py-0.5">{p.posicao}º</td>
+                  <td className="py-0.5">{p.pontos}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  )
+}

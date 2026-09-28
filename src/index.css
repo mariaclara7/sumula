@@ -1,0 +1,65 @@
+@import 'tailwindcss';
+
+/*
+ * Cores do site. Os componentes usam só estes nomes (bg-superficie, text-texto-2...),
+ * então o modo escuro troca tudo em um lugar.
+ */
+:root {
+  color-scheme: light;
+  --fundo: #f6f6f4;
+  --superficie: #fcfcfb;
+  --superficie-2: #f0efeb;
+  --borda: #e4e3de;
+  --texto: #0b0b0b;
+  --texto-2: #52514e;
+  --texto-3: #6b6a65;
+  --destaque: #0d7a45;
+  --serie: #2a78d6;
+  --zona-libertadores: #2a78d6;
+  --zona-pre-libertadores: #4a3aa7;
+  --zona-sul-americana: #1baf7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fundo: #111110;
+    --superficie: #1a1a19;
+    --superficie-2: #242422;
+    --borda: #33332f;
+    --texto: #ffffff;
+    --texto-2: #c3c2b7;
+    --texto-3: #9a998f;
+    --destaque: #3fb877;
+    --serie: #3987e5;
+    --zona-libertadores: #3987e5;
+    --zona-pre-libertadores: #9085e9;
+    --zona-sul-americana: #199e70;
+  }
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-borda: var(--borda);
+  --color-texto: var(--texto);
+  --color-texto-2: var(--texto-2);
+  --color-texto-3: var(--texto-3);
+  --color-destaque: var(--destaque);
+  --color-serie: var(--serie);
+  --color-zona-libertadores: var(--zona-libertadores);
+  --color-zona-pre-libertadores: var(--zona-pre-libertadores);
+  --color-zona-sul-americana: var(--zona-sul-americana);
+  --color-zona-rebaixamento: #d03b3b;
+  --color-vitoria: #0ca30c;
+  --color-empate: #8a8983;
+  --color-derrota: #d03b3b;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
