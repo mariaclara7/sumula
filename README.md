@@ -11,6 +11,7 @@ Os dados vêm da [api-sumula](https://github.com/mariaclara7/api-sumula).
 |---|---|
 | `/` | Classificação com filtros de turno (geral, 1º, 2º), mando (todos, casa, fora) e tempo de jogo (jogo todo, só o 1º tempo, só o 2º tempo), zonas de Libertadores/rebaixamento e forma recente. Os filtros ficam na URL, então dá para compartilhar o link. |
 | `/chances` | Chance de cada time ser campeão, ir para a Libertadores, Pré-Libertadores, Sul-Americana ou cair, a partir de 10.000 simulações dos jogos restantes feitas pela API. |
+| `/evolucao?times=:id,:id&medida=pontos` | Posição ou pontos rodada a rodada de até 5 times no mesmo gráfico. Sem escolha, mostra os 4 primeiros. Cada time fica com a mesma cor enquanto estiver selecionado, mesmo se outro sair. |
 | `/tempos` | 1º x 2º tempo: gols por tempo, viradas e pontos ganhos ou perdidos depois do intervalo. Quando a API tem os gols com minuto (plano pago do football-data.org), mostra também um mapa de calor dos gols por faixa de 15 minutos. |
 | `/times/:id` | Resumo do time: posição, aproveitamento, gráfico da posição rodada a rodada, chances até o fim com a distribuição da posição final, desempenho por recorte, 1º x 2º tempo (com a matriz "intervalo → final" e, se houver, os gols por faixa de minuto), últimos e próximos jogos. |
 | `/confronto?a=:id&b=:id` | Confronto direto entre dois times na temporada. |

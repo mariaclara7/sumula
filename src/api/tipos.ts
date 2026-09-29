@@ -59,6 +59,11 @@ export type PontoEvolucao = {
   pontos: number
 }
 
+export type EvolucaoTime = {
+  timeId: number
+  rodadas: PontoEvolucao[]
+}
+
 export type ResumoTime = {
   time: Time
   geral: LinhaClassificacao

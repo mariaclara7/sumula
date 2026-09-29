@@ -8,6 +8,7 @@ import { PaginaArtilharia } from './paginas/PaginaArtilharia'
 import { PaginaChances } from './paginas/PaginaChances'
 import { PaginaClassificacao } from './paginas/PaginaClassificacao'
 import { PaginaConfronto } from './paginas/PaginaConfronto'
+import { PaginaEvolucao } from './paginas/PaginaEvolucao'
 import { PaginaNaoEncontrada } from './paginas/PaginaNaoEncontrada'
 import { PaginaTempos } from './paginas/PaginaTempos'
 import { PaginaTime } from './paginas/PaginaTime'
@@ -26,6 +27,7 @@ createRoot(document.getElementById('root')!).render(
             <Route index element={<PaginaClassificacao />} />
             <Route path="times/:timeId" element={<PaginaTime />} />
             <Route path="chances" element={<PaginaChances />} />
+            <Route path="evolucao" element={<PaginaEvolucao />} />
             <Route path="tempos" element={<PaginaTempos />} />
             <Route path="confronto" element={<PaginaConfronto />} />
             <Route path="artilharia" element={<PaginaArtilharia />} />

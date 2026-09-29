@@ -3,6 +3,7 @@ import { obter } from './cliente'
 import type {
   Artilheiro,
   Classificacao,
+  EvolucaoTime,
   Mando,
   Recorte,
   ResultadoSimulacao,
@@ -25,6 +26,13 @@ export function useClassificacao(recorte: Recorte, mando: Mando, tempo: Tempo) {
   return useQuery({
     queryKey: ['classificacao', recorte, mando, tempo],
     queryFn: () => obter<Classificacao>('/classificacao', { recorte, mando, tempo }),
+  })
+}
+
+export function useEvolucao() {
+  return useQuery({
+    queryKey: ['evolucao'],
+    queryFn: () => obter<EvolucaoTime[]>('/evolucao'),
   })
 }
 

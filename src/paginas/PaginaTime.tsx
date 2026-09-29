@@ -58,6 +58,11 @@ export function PaginaTime() {
 
       <Cartao titulo="Posição rodada a rodada">
         <GraficoEvolucao pontos={resumo.data.evolucao} quantidadeTimes={times.data.lista.length} nomeTime={time.nomeCurto} />
+        <p className="border-t border-borda px-4 py-2 text-xs">
+          <Link to={`/evolucao?times=${time.id}`} className="text-destaque hover:underline">
+            Comparar a evolução com outros times
+          </Link>
+        </p>
       </Cartao>
 
       <ChancesDoTime timeId={time.id} nomeTime={time.nomeCurto} />
