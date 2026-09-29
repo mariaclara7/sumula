@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { obter } from './cliente'
-import type { Artilheiro, Classificacao, Mando, Recorte, ResumoConfronto, ResumoTime, Time } from './tipos'
+import type {
+  Artilheiro,
+  Classificacao,
+  Mando,
+  Recorte,
+  ResultadoSimulacao,
+  ResumoConfronto,
+  ResumoTime,
+  Time,
+} from './tipos'
 
 export function useTimes() {
   return useQuery({
@@ -36,5 +45,12 @@ export function useArtilharia() {
   return useQuery({
     queryKey: ['artilharia'],
     queryFn: () => obter<Artilheiro[]>('/artilharia'),
+  })
+}
+
+export function useProbabilidades() {
+  return useQuery({
+    queryKey: ['probabilidades'],
+    queryFn: () => obter<ResultadoSimulacao>('/probabilidades'),
   })
 }

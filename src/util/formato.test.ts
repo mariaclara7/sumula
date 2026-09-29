@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Partida } from '../api/tipos'
-import { formatarDataPartida, formatarSaldo, resultadoPara } from './formato'
+import { formatarChance, formatarDataPartida, formatarSaldo, resultadoPara } from './formato'
 
 const partida = (golsMandante: number | null, golsVisitante: number | null): Partida => ({
   id: 1,
@@ -35,5 +35,11 @@ describe('formatarSaldo', () => {
 describe('formatarDataPartida', () => {
   it('usa o horário de Brasília', () => {
     expect(formatarDataPartida('2026-04-05T19:00:00Z')).toContain('16:00')
+  })
+})
+
+describe('formatarChance', () => {
+  it('não arredonda para 0% ou 100% o que ainda pode acontecer', () => {
+    expect([0, 0.001, 0.123, 0.998, 1].map(formatarChance)).toEqual(['—', '<1%', '12%', '>99%', '100%'])
   })
 })

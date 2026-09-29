@@ -38,6 +38,18 @@ export function formatarPercentual(valor: number) {
   return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
 }
 
+/**
+ * Chance em percentual inteiro. Evita "0%" e "100%" quando o evento ainda é possível,
+ * porque arredondar 0,3% para 0% passa a ideia errada de que acabou.
+ */
+export function formatarChance(chance: number) {
+  if (chance <= 0) return '—'
+  if (chance >= 1) return '100%'
+  if (chance < 0.005) return '<1%'
+  if (chance > 0.995) return '>99%'
+  return `${Math.round(chance * 100)}%`
+}
+
 export const SIGLA_RESULTADO: Record<Resultado, string> = {
   vitoria: 'V',
   empate: 'E',

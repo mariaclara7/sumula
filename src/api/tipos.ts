@@ -79,6 +79,22 @@ export type ResumoConfronto = {
   partidas: Partida[]
 }
 
+export type ProbabilidadesTime = {
+  time: Time
+  posicaoAtual: number
+  pontosAtuais: number
+  pontosEsperados: number
+  posicaoMedia: number
+  /** Chance de terminar em cada posição; índice 0 = 1º lugar. */
+  posicoes: number[]
+}
+
+export type ResultadoSimulacao = {
+  simulacoes: number
+  partidasRestantes: number
+  times: ProbabilidadesTime[]
+}
+
 export type Artilheiro = {
   jogadorId: number
   nome: string

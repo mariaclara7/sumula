@@ -10,7 +10,8 @@ Os dados vêm da [api-sumula](https://github.com/mariaclara7/api-sumula).
 | Rota | O que mostra |
 |---|---|
 | `/` | Classificação com filtros de turno (geral, 1º, 2º) e mando (todos, casa, fora), zonas de Libertadores/rebaixamento e forma recente. Os filtros ficam na URL, então dá para compartilhar o link. |
-| `/times/:id` | Resumo do time: posição, aproveitamento, gráfico da posição rodada a rodada, desempenho por recorte, últimos e próximos jogos. |
+| `/chances` | Chance de cada time ser campeão, ir para a Libertadores, Pré-Libertadores, Sul-Americana ou cair, a partir de 10.000 simulações dos jogos restantes feitas pela API. |
+| `/times/:id` | Resumo do time: posição, aproveitamento, gráfico da posição rodada a rodada, chances até o fim com a distribuição da posição final, desempenho por recorte, últimos e próximos jogos. |
 | `/confronto?a=:id&b=:id` | Confronto direto entre dois times na temporada. |
 | `/artilharia` | Artilheiros com gols, assistências e pênaltis. |
 

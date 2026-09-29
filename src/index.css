@@ -16,7 +16,6 @@
   --destaque: #0d7a45;
   --serie: #2a78d6;
   --zona-libertadores: #2a78d6;
-  --zona-pre-libertadores: #4a3aa7;
   --zona-sul-americana: #1baf7a;
 }
 
@@ -33,7 +32,6 @@
     --destaque: #3fb877;
     --serie: #3987e5;
     --zona-libertadores: #3987e5;
-    --zona-pre-libertadores: #9085e9;
     --zona-sul-americana: #199e70;
   }
 }
@@ -49,7 +47,8 @@
   --color-destaque: var(--destaque);
   --color-serie: var(--serie);
   --color-zona-libertadores: var(--zona-libertadores);
-  --color-zona-pre-libertadores: var(--zona-pre-libertadores);
+  /* Mesma competição da Libertadores: mesmo azul, mais claro. */
+  --color-zona-pre-libertadores: color-mix(in oklab, var(--zona-libertadores) 45%, var(--superficie));
   --color-zona-sul-americana: var(--zona-sul-americana);
   --color-zona-rebaixamento: #d03b3b;
   --color-vitoria: #0ca30c;

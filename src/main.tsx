@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { Layout } from './componentes/Layout'
 import './index.css'
 import { PaginaArtilharia } from './paginas/PaginaArtilharia'
+import { PaginaChances } from './paginas/PaginaChances'
 import { PaginaClassificacao } from './paginas/PaginaClassificacao'
 import { PaginaConfronto } from './paginas/PaginaConfronto'
 import { PaginaNaoEncontrada } from './paginas/PaginaNaoEncontrada'
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
           <Route element={<Layout />}>
             <Route index element={<PaginaClassificacao />} />
             <Route path="times/:timeId" element={<PaginaTime />} />
+            <Route path="chances" element={<PaginaChances />} />
             <Route path="confronto" element={<PaginaConfronto />} />
             <Route path="artilharia" element={<PaginaArtilharia />} />
             <Route path="*" element={<PaginaNaoEncontrada />} />
