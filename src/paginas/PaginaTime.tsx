@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router'
-import { useProbabilidades, useResumoTime, useTimes } from '../api/consultas'
+import { useProbabilidades, useResumoTime, useTempos, useTimes } from '../api/consultas'
 import type { LinhaClassificacao } from '../api/tipos'
 import { BarraChance } from '../componentes/BarraChance'
 import { Cartao } from '../componentes/Cartao'
@@ -7,8 +7,10 @@ import { Escudo } from '../componentes/Escudo'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
 import { FormaRecente } from '../componentes/FormaRecente'
 import { GraficoEvolucao } from '../componentes/GraficoEvolucao'
+import { GraficoFaixas } from '../componentes/GraficoFaixas'
 import { GraficoPosicoesFinais } from '../componentes/GraficoPosicoesFinais'
 import { ListaPartidas } from '../componentes/ListaPartidas'
+import { MatrizIntervalo } from '../componentes/MatrizIntervalo'
 import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
 import { formatarPercentual, formatarSaldo } from '../util/formato'
 
@@ -95,6 +97,8 @@ export function PaginaTime() {
         </div>
       </Cartao>
 
+      <TemposDoTime timeId={time.id} nomeTime={time.nomeCurto} />
+
       <div className="grid gap-4 md:grid-cols-2">
         <Cartao titulo="Últimos jogos">
           <ListaPartidas partidas={resumo.data.ultimasPartidas} times={times.data.porId} vazio="Nenhum jogo disputado." />
@@ -144,6 +148,107 @@ function ChancesDoTime({ timeId, nomeTime }: { timeId: number; nomeTime: string 
         </Link>
       </p>
     </Cartao>
+  )
+}
+
+function TemposDoTime({ timeId, nomeTime }: { timeId: number; nomeTime: string }) {
+  const { data, isPending, isError } = useTempos()
+  const tempos = data?.times.find((t) => t.time.id === timeId)
+
+  if (isError || (data && (!tempos || tempos.jogos === 0))) return null
+
+  return (
+    <Cartao titulo="1º x 2º tempo">
+      {isPending || !tempos ? (
+        <Carregando />
+      ) : (
+        <>
+          <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
+            <table className="w-full text-center text-sm tabular-nums">
+              <caption className="sr-only">Gols por tempo</caption>
+              <thead className="text-xs text-texto-3">
+                <tr>
+                  <th scope="col" className="py-1 text-left font-medium">
+                    Gols
+                  </th>
+                  <th scope="col" className="py-1 font-medium">
+                    Marcados
+                  </th>
+                  <th scope="col" className="py-1 font-medium">
+                    Sofridos
+                  </th>
+                  <th scope="col" className="py-1 font-medium">
+                    Saldo
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-borda">
+                {(
+                  [
+                    ['1º tempo', tempos.golsProPrimeiroTempo, tempos.golsContraPrimeiroTempo],
+                    ['2º tempo', tempos.golsProSegundoTempo, tempos.golsContraSegundoTempo],
+                  ] as const
+                ).map(([rotulo, pro, contra]) => (
+                  <tr key={rotulo}>
+                    <th scope="row" className="py-2 text-left font-medium">
+                      {rotulo}
+                    </th>
+                    <td className="py-2">{pro}</td>
+                    <td className="py-2">{contra}</td>
+                    <td className="py-2 font-semibold">{formatarSaldo(pro - contra)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <Destaque
+                rotulo="Pontos depois do intervalo"
+                valor={formatarSaldo(tempos.pontosDepoisDoIntervalo)}
+                detalhe={`${tempos.pontosNoIntervalo} no intervalo → ${tempos.pontos} no fim`}
+              />
+              <Destaque rotulo="Viradas" valor={`${tempos.viradasAFavor} / ${tempos.viradasContra}`} detalhe="a favor / sofridas" />
+              <Destaque
+                rotulo="Pontos cedidos vencendo"
+                valor={String(tempos.pontosPerdidosVencendo)}
+                detalhe="em jogos que vencia no intervalo"
+              />
+              <Destaque
+                rotulo="Pontos buscados perdendo"
+                valor={String(tempos.pontosConquistadosPerdendo)}
+                detalhe="em jogos que perdia no intervalo"
+              />
+            </dl>
+          </div>
+
+          <div className="border-t border-borda px-2 py-3 sm:px-4">
+            <MatrizIntervalo transicoes={tempos.transicoes} />
+          </div>
+
+          {tempos.faixas && data && (
+            <div className="border-t border-borda">
+              <h3 className="px-4 pt-3 text-xs font-medium text-texto-3">Gols por faixa de minuto</h3>
+              <GraficoFaixas faixas={tempos.faixas} rotulos={data.rotulosFaixas} nomeTime={nomeTime} />
+            </div>
+          )}
+        </>
+      )}
+      <p className="border-t border-borda px-4 py-2 text-xs text-texto-3">
+        <Link to="/tempos" className="text-destaque hover:underline">
+          Comparar com os outros times
+        </Link>
+      </p>
+    </Cartao>
+  )
+}
+
+function Destaque({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-texto-3">{rotulo}</dt>
+      <dd className="text-lg font-semibold tabular-nums">{valor}</dd>
+      <dd className="text-xs text-texto-2">{detalhe}</dd>
+    </div>
   )
 }
 

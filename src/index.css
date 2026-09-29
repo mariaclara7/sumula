@@ -15,6 +15,7 @@
   --texto-3: #6b6a65;
   --destaque: #0d7a45;
   --serie: #2a78d6;
+  --serie-2: #eb6834;
   --zona-libertadores: #2a78d6;
   --zona-sul-americana: #1baf7a;
 }
@@ -31,6 +32,7 @@
     --texto-3: #9a998f;
     --destaque: #3fb877;
     --serie: #3987e5;
+    --serie-2: #d95926;
     --zona-libertadores: #3987e5;
     --zona-sul-americana: #199e70;
   }
@@ -46,6 +48,7 @@
   --color-texto-3: var(--texto-3);
   --color-destaque: var(--destaque);
   --color-serie: var(--serie);
+  --color-serie-2: var(--serie-2);
   --color-zona-libertadores: var(--zona-libertadores);
   /* Mesma competição da Libertadores: mesmo azul, mais claro. */
   --color-zona-pre-libertadores: color-mix(in oklab, var(--zona-libertadores) 45%, var(--superficie));

@@ -11,6 +11,8 @@ const partida = (golsMandante: number | null, golsVisitante: number | null): Par
   visitanteId: 20,
   golsMandante,
   golsVisitante,
+  golsMandanteIntervalo: null,
+  golsVisitanteIntervalo: null,
   temResultado: golsMandante !== null,
 })
 

@@ -6,8 +6,10 @@ import type {
   Mando,
   Recorte,
   ResultadoSimulacao,
+  ResultadoTempos,
   ResumoConfronto,
   ResumoTime,
+  Tempo,
   Time,
 } from './tipos'
 
@@ -19,10 +21,17 @@ export function useTimes() {
   })
 }
 
-export function useClassificacao(recorte: Recorte, mando: Mando) {
+export function useClassificacao(recorte: Recorte, mando: Mando, tempo: Tempo) {
   return useQuery({
-    queryKey: ['classificacao', recorte, mando],
-    queryFn: () => obter<Classificacao>('/classificacao', { recorte, mando }),
+    queryKey: ['classificacao', recorte, mando, tempo],
+    queryFn: () => obter<Classificacao>('/classificacao', { recorte, mando, tempo }),
+  })
+}
+
+export function useTempos() {
+  return useQuery({
+    queryKey: ['tempos'],
+    queryFn: () => obter<ResultadoTempos>('/tempos'),
   })
 }
 

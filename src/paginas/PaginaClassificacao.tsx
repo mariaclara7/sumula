@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router'
 import { useClassificacao } from '../api/consultas'
-import type { Mando, Recorte } from '../api/tipos'
+import type { Mando, Recorte, Tempo } from '../api/tipos'
 import { Abas } from '../componentes/Abas'
 import { Cartao } from '../componentes/Cartao'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
@@ -19,6 +19,17 @@ const MANDOS: { valor: Mando; rotulo: string }[] = [
   { valor: 'fora', rotulo: 'Fora' },
 ]
 
+const TEMPOS: { valor: Tempo; rotulo: string }[] = [
+  { valor: 'jogoTodo', rotulo: 'Jogo todo' },
+  { valor: 'primeiroTempo', rotulo: '1º tempo' },
+  { valor: 'segundoTempo', rotulo: '2º tempo' },
+]
+
+const EXPLICACAO_TEMPO: Partial<Record<Tempo, string>> = {
+  primeiroTempo: 'Como estaria a tabela se todos os jogos terminassem no intervalo.',
+  segundoTempo: 'Como estaria a tabela se só valessem os gols do 2º tempo.',
+}
+
 function lerOpcao<T extends string>(valor: string | null, opcoes: { valor: T }[]): T {
   return opcoes.find((opcao) => opcao.valor === valor)?.valor ?? opcoes[0].valor
 }
@@ -28,7 +39,8 @@ export function PaginaClassificacao() {
   const [busca, setBusca] = useSearchParams()
   const recorte = lerOpcao(busca.get('recorte'), RECORTES)
   const mando = lerOpcao(busca.get('mando'), MANDOS)
-  const { data, isPending, isError, refetch } = useClassificacao(recorte, mando)
+  const tempo = lerOpcao(busca.get('tempo'), TEMPOS)
+  const { data, isPending, isError, refetch } = useClassificacao(recorte, mando, tempo)
 
   function alterar(chave: string, valor: string, padrao: string) {
     setBusca(
@@ -53,8 +65,11 @@ export function PaginaClassificacao() {
         <div className="flex flex-wrap gap-2">
           <Abas rotulo="Turno" opcoes={RECORTES} valor={recorte} aoMudar={(v) => alterar('recorte', v, 'geral')} />
           <Abas rotulo="Mando de campo" opcoes={MANDOS} valor={mando} aoMudar={(v) => alterar('mando', v, 'todos')} />
+          <Abas rotulo="Tempo de jogo" opcoes={TEMPOS} valor={tempo} aoMudar={(v) => alterar('tempo', v, 'jogoTodo')} />
         </div>
       </div>
+
+      {EXPLICACAO_TEMPO[tempo] && <p className="text-sm text-texto-2">{EXPLICACAO_TEMPO[tempo]}</p>}
 
       <Cartao>
         {isPending ? (
@@ -64,7 +79,10 @@ export function PaginaClassificacao() {
         ) : data.linhas.length === 0 ? (
           <Vazio>Ainda não há dados desta temporada.</Vazio>
         ) : (
-          <TabelaClassificacao linhas={data.linhas} mostrarZonas={recorte === 'geral' && mando === 'todos'} />
+          <TabelaClassificacao
+            linhas={data.linhas}
+            mostrarZonas={recorte === 'geral' && mando === 'todos' && tempo === 'jogoTodo'}
+          />
         )}
       </Cartao>
     </div>

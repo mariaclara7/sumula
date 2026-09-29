@@ -9,6 +9,7 @@ import { PaginaChances } from './paginas/PaginaChances'
 import { PaginaClassificacao } from './paginas/PaginaClassificacao'
 import { PaginaConfronto } from './paginas/PaginaConfronto'
 import { PaginaNaoEncontrada } from './paginas/PaginaNaoEncontrada'
+import { PaginaTempos } from './paginas/PaginaTempos'
 import { PaginaTime } from './paginas/PaginaTime'
 
 // Os dados só mudam quando o coletor roda, então não precisa buscar de novo a todo momento.
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
             <Route index element={<PaginaClassificacao />} />
             <Route path="times/:timeId" element={<PaginaTime />} />
             <Route path="chances" element={<PaginaChances />} />
+            <Route path="tempos" element={<PaginaTempos />} />
             <Route path="confronto" element={<PaginaConfronto />} />
             <Route path="artilharia" element={<PaginaArtilharia />} />
             <Route path="*" element={<PaginaNaoEncontrada />} />

@@ -4,6 +4,7 @@ import { NOME_COMPETICAO, TEMPORADA } from '../config'
 const LINKS = [
   { para: '/', rotulo: 'Classificação' },
   { para: '/chances', rotulo: 'Chances' },
+  { para: '/tempos', rotulo: '1º x 2º tempo' },
   { para: '/confronto', rotulo: 'Confronto direto' },
   { para: '/artilharia', rotulo: 'Artilharia' },
 ]
