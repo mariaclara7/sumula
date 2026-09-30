@@ -56,11 +56,65 @@ As cores de cada clube ficam em `src/util/cores.ts`, porque a API não as fornec
 (OVR do time, ataque, defesa e atributos dos jogadores) são fórmulas simples sobre os números reais, em `src/util/notas.ts`.
 Números que contam e barras que crescem respeitam o "reduzir movimento" do sistema.
 
-## Publicação (Cloudflare Pages, gratuito)
+## Publicação
 
-1. No [Cloudflare Pages](https://pages.cloudflare.com), conecte este repositório.
-2. Configuração de build: comando `npm run build`, pasta de saída `dist`.
-3. Variável de ambiente `VITE_API_URL` com o endereço da API no Render (ex.: `https://api-sumula.onrender.com`).
-4. Adicione o endereço do site em `Cors__Origens__0` na API.
+O site e os dados ficam na **Cloudflare**, em dois Workers só com arquivos estáticos (grátis e sem limite de
+visitas para arquivos estáticos):
 
-O Cloudflare Pages já entrega o `index.html` para rotas como `/times/123`, então a navegação direta funciona.
+| Worker | O que tem | Quem publica |
+|---|---|---|
+| `sumula` | o site (pasta `dist/`, veja `wrangler.jsonc`) | workflow **Publicar** deste repositório, a cada push na `main` |
+| `sumula-dados` | a "API pré-calculada": um `.json` para cada endereço que o site usa | workflow **Coletor** da [api-sumula](https://github.com/mariaclara7/api-sumula), a cada 3 horas |
+
+Em produção o site é gerado com `VITE_API_ESTATICA=true`: em vez de chamar a API ao vivo, lê os arquivos
+(`src/api/rotas.ts` monta o nome de cada um). O banco (Neon) só é usado pela coleta.
+
+### Passo a passo
+
+**1. Contas (grátis)**
+
+- **Neon** ([neon.tech](https://neon.tech)): crie um projeto `sumula` (região mais perto do Brasil que houver) e
+  copie a *connection string* (`postgresql://...`).
+- **Cloudflare** ([dash.cloudflare.com](https://dash.cloudflare.com)): crie a conta e abra uma vez
+  *Workers & Pages*, para a Cloudflare criar o seu endereço `*.workers.dev`. Depois:
+  - copie o **Account ID** (aparece na lateral de *Workers & Pages*);
+  - em *My Profile → API Tokens → Create Token*, use o modelo **Edit Cloudflare Workers**, escolha a sua conta e
+    crie. Copie o token (ele só aparece uma vez).
+
+**2. Secrets no GitHub** (*Settings → Secrets and variables → Actions → New repository secret*)
+
+- `api-sumula`: `FOOTBALL_DATA_TOKEN`, `DATABASE_URL` (a do Neon), `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- `sumula` (este): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+
+**3. Primeira publicação**
+
+1. Em `api-sumula`, aba *Actions* → **Coletor** → *Run workflow*. No fim do passo "Publica na Cloudflare" aparece
+   o endereço dos dados, algo como `https://sumula-dados.SEU-NOME.workers.dev`.
+2. Aqui em `sumula`, *Settings → Secrets and variables → Actions → Variables*, crie a variável
+   `SUMULA_API_URL` com esse endereço.
+3. Aba *Actions* → **Publicar** → *Run workflow*. O site fica em `https://sumula.SEU-NOME.workers.dev`.
+
+**4. Domínio `.com.br`**
+
+1. No [registro.br](https://registro.br), procure e registre o domínio (cerca de R$ 40 por ano, com CPF).
+2. Na Cloudflare, *Add a domain* → digite o domínio → plano **Free**. Ela mostra dois *nameservers*
+   (ex.: `ana.ns.cloudflare.com`).
+3. No registro.br, no painel do domínio, troque os servidores DNS pelos dois da Cloudflare. Se o DNSSEC estiver
+   ligado no registro.br, desligue antes (dá para religar depois pela Cloudflare).
+4. Quando a Cloudflare mostrar o domínio como **Active** (de minutos a algumas horas):
+   - descomente `routes` no `wrangler.jsonc` deste repositório (`sumula.com.br` e `www`) e no
+     `publicacao/wrangler.jsonc` da api-sumula (`dados.sumula.com.br`), trocando pelo domínio escolhido;
+   - troque a variável `SUMULA_API_URL` para `https://dados.sumula.com.br`;
+   - rode **Coletor** e depois **Publicar**.
+
+### Testar a produção na sua máquina
+
+```bash
+# na api-sumula: gera os arquivos e sobe o Worker de dados
+Exportacao__Saida=publicacao/saida dotnet run --project src/Sumula.Exportador
+cd publicacao && npx wrangler dev --port 8787
+
+# aqui: gera o site em modo estático e sobe o Worker do site
+VITE_API_URL=http://127.0.0.1:8787 VITE_API_ESTATICA=true npm run build
+npx wrangler dev --port 8788   # http://127.0.0.1:8788
+```

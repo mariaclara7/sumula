@@ -1,0 +1,35 @@
+name: Publicar
+
+# Gera o site e publica na Cloudflare como o Worker "sumula".
+# Secrets (Settings > Secrets and variables > Actions > Secrets): CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# Variável (aba Variables): SUMULA_API_URL = endereço do Worker "sumula-dados" (ou https://dados.<domínio>)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publicar
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Gera o site
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.SUMULA_API_URL }}
+          VITE_API_ESTATICA: "true"
+      - name: Publica na Cloudflare
+        run: npx --yes wrangler@4 deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

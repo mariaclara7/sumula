@@ -1,0 +1,16 @@
+// O site na Cloudflare: um Worker só com os arquivos do build (dist/).
+// Publicado pelo workflow "Publicar" a cada push na main (npx wrangler deploy).
+{
+  "name": "sumula",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    // Rotas como /times/123 ou /simulador entregam o index.html e o React Router assume.
+    "not_found_handling": "single-page-application"
+  }
+  // Depois que o domínio estiver na Cloudflare, descomente para servir em sumula.com.br:
+  // , "routes": [
+  //   { "pattern": "sumula.com.br", "custom_domain": true },
+  //   { "pattern": "www.sumula.com.br", "custom_domain": true }
+  // ]
+}
