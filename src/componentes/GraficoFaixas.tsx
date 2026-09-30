@@ -14,8 +14,8 @@ const RAIO = 4
 const ESPACO = 2
 
 const SERIES = [
-  { chave: 'marcados', rotulo: 'Marcados', classe: 'fill-serie', legenda: 'bg-serie' },
-  { chave: 'sofridos', rotulo: 'Sofridos', classe: 'fill-serie-2', legenda: 'bg-serie-2' },
+  { chave: 'marcados', rotulo: 'Marcados', classe: 'fill-verde', legenda: 'bg-verde' },
+  { chave: 'sofridos', rotulo: 'Sofridos', classe: 'fill-vermelho', legenda: 'bg-vermelho' },
 ] as const
 
 /** Gols marcados e sofridos em cada faixa de 15 minutos, lado a lado. */
@@ -51,10 +51,10 @@ export function GraficoFaixas({ faixas, rotulos, nomeTime }: Props) {
 
   return (
     <div>
-      <ul className="flex gap-4 px-4 pt-3 text-xs text-texto-2">
+      <ul className="flex gap-4 px-4 pt-3 text-[13px] font-semibold text-texto-2">
         {SERIES.map((serie) => (
           <li key={serie.chave} className="flex items-center gap-1.5">
-            <span className={`inline-block size-2.5 rounded-sm ${serie.legenda}`} />
+            <span className={`inline-block size-2.5 ${serie.legenda}`} />
             {serie.rotulo}
           </li>
         ))}
@@ -76,7 +76,7 @@ export function GraficoFaixas({ faixas, rotulos, nomeTime }: Props) {
                   const x = centro(indice) - larguraBarra - ESPACO / 2 + s * (larguraBarra + ESPACO)
                   return valor > 0 ? <path key={serie.chave} d={coluna(x, valor)} className={serie.classe} /> : null
                 })}
-                <text x={centro(indice)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 text-[11px] tabular-nums">
+                <text x={centro(indice)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 font-mono text-[11px]">
                   {rotulo}
                 </text>
               </g>
@@ -98,13 +98,13 @@ export function GraficoFaixas({ faixas, rotulos, nomeTime }: Props) {
 
         {ativa !== null && (
           <div
-            className="pointer-events-none absolute top-0 whitespace-nowrap rounded-md border border-borda bg-superficie px-2.5 py-1.5 text-xs shadow-md"
+            className="pointer-events-none absolute top-0 border-2 border-texto bg-superficie px-2.5 py-1.5 text-xs whitespace-nowrap shadow-[4px_4px_0_#c6f432]"
             style={{ left: dicaX + 8, width: larguraDica }}
           >
             <div className="text-texto-3">{rotulos[ativa]} min</div>
             {SERIES.map((serie) => (
               <div key={serie.chave} className="flex items-center gap-1.5 tabular-nums text-texto">
-                <span className={`inline-block size-2 rounded-sm ${serie.legenda}`} />
+                <span className={`inline-block size-2 ${serie.legenda}`} />
                 {serie.rotulo}: <span className="font-semibold">{faixas[serie.chave][ativa]}</span>
               </div>
             ))}

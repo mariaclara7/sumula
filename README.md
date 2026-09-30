@@ -9,13 +9,13 @@ Os dados vêm da [api-sumula](https://github.com/mariaclara7/api-sumula).
 
 | Rota | O que mostra |
 |---|---|
-| `/` | Classificação com filtros de turno (geral, 1º, 2º), mando (todos, casa, fora) e tempo de jogo (jogo todo, só o 1º tempo, só o 2º tempo), zonas de Libertadores/rebaixamento e forma recente. Os filtros ficam na URL, então dá para compartilhar o link. |
+| `/` | Card do líder (clique para confete), "caixa de entrada" com manchetes geradas a partir dos dados da rodada e classificação com filtros de turno (geral, 1º, 2º), mando (todos, casa, fora) e tempo de jogo (jogo todo, só o 1º tempo, só o 2º tempo), zonas de Libertadores/rebaixamento, nota OVR e forma recente. Ao trocar o filtro, as linhas deslizam para a nova posição e mostram ▲▼ em relação à tabela normal. Os filtros ficam na URL, então dá para compartilhar o link. |
 | `/chances` | Chance de cada time ser campeão, ir para a Libertadores, Pré-Libertadores, Sul-Americana ou cair, a partir de 10.000 simulações dos jogos restantes feitas pela API. |
 | `/evolucao?times=:id,:id&medida=pontos` | Posição ou pontos rodada a rodada de até 5 times no mesmo gráfico. Sem escolha, mostra os 4 primeiros. Cada time fica com a mesma cor enquanto estiver selecionado, mesmo se outro sair. |
 | `/tempos` | 1º x 2º tempo: gols por tempo, viradas e pontos ganhos ou perdidos depois do intervalo. Quando a API tem os gols com minuto (plano pago do football-data.org), mostra também um mapa de calor dos gols por faixa de 15 minutos. |
 | `/times/:id` | Resumo do time: posição, aproveitamento, gráfico da posição rodada a rodada, chances até o fim com a distribuição da posição final, desempenho por recorte, 1º x 2º tempo (com a matriz "intervalo → final" e, se houver, os gols por faixa de minuto), últimos e próximos jogos. |
-| `/confronto?a=:id&b=:id` | Confronto direto entre dois times na temporada. |
-| `/artilharia` | Artilheiros com gols, assistências e pênaltis. |
+| `/confronto?a=:id&b=:id` | Comparador: confronto direto na temporada e 8 números lado a lado (pontos, gols, chances...). Sem times na URL, compara o "meu time" (ou o líder) com o líder. |
+| `/artilharia` | Pódio dos 3 primeiros em cards de jogador e a lista completa. Clicar num jogador abre o card com atributos e números. |
 
 ## Rodando na sua máquina
 
@@ -47,7 +47,12 @@ src/
 ```
 
 As cores ficam só em `src/index.css`, como variáveis usadas pelo Tailwind (`bg-superficie`, `text-texto-2`...).
-O modo escuro segue a preferência do sistema.
+O modo escuro segue a preferência do sistema até a pessoa usar o botão Escuro/Claro; a escolha e o "meu time"
+(destacado nas tabelas) ficam salvos no navegador.
+
+As cores de cada clube ficam em `src/util/cores.ts`, porque a API não as fornece. As notas no estilo de game
+(OVR do time, ataque, defesa e atributos dos jogadores) são fórmulas simples sobre os números reais, em `src/util/notas.ts`.
+Números que contam e barras que crescem respeitam o "reduzir movimento" do sistema.
 
 ## Publicação (Cloudflare Pages, gratuito)
 

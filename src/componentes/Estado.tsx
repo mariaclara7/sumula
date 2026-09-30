@@ -11,8 +11,10 @@ export function Carregando() {
 
   return (
     <div role="status" className="py-16 text-center text-texto-2">
-      <div className="mx-auto mb-3 size-6 animate-spin rounded-full border-2 border-borda border-t-destaque" />
-      {demorando ? 'Acordando o servidor, isso pode levar até 30 segundos…' : 'Carregando…'}
+      <div className="mx-auto mb-3 size-7 animate-spin border-[3px] border-borda border-t-lima" />
+      <span className="font-mono text-xs font-extrabold tracking-[2px] uppercase">
+        {demorando ? 'Acordando o servidor, isso pode levar até 30 segundos…' : 'Carregando…'}
+      </span>
     </div>
   )
 }
@@ -20,20 +22,33 @@ export function Carregando() {
 export function Erro({ tentarDeNovo }: { tentarDeNovo?: () => void }) {
   return (
     <div role="alert" className="py-16 text-center text-texto-2">
-      <p className="mb-3">Não foi possível carregar os dados.</p>
-      {tentarDeNovo && (
-        <button
-          type="button"
-          onClick={tentarDeNovo}
-          className="rounded-md border border-borda bg-superficie px-3 py-1.5 text-sm font-medium text-texto hover:bg-superficie-2"
-        >
-          Tentar de novo
-        </button>
-      )}
+      <p className="mb-4 font-bold text-texto">Não foi possível carregar os dados.</p>
+      {tentarDeNovo && <BotaoPrincipal onClick={tentarDeNovo}>Tentar de novo</BotaoPrincipal>}
     </div>
   )
 }
 
 export function Vazio({ children }: { children: React.ReactNode }) {
   return <p className="py-16 text-center text-texto-2">{children}</p>
+}
+
+/** Botão lima com sombra dura, que "afunda" ao clicar. */
+export function BotaoPrincipal({
+  children,
+  onClick,
+  className = '',
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`cursor-pointer border-2 border-texto bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite shadow-[4px_4px_0_var(--texto)] transition-[transform,box-shadow] duration-75 active:translate-x-1 active:translate-y-1 active:shadow-none ${className}`}
+    >
+      {children}
+    </button>
+  )
 }

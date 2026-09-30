@@ -5,13 +5,15 @@ type Props = {
   pontos: PontoEvolucao[]
   quantidadeTimes: number
   nomeTime: string
+  /** 0 a 1: a linha se desenha rodada a rodada junto com a animação da página. */
+  progresso?: number
 }
 
-const ALTURA = 240
-const MARGEM = { topo: 16, direita: 40, base: 28, esquerda: 32 }
+const ALTURA = 260
+const MARGEM = { topo: 14, direita: 50, base: 30, esquerda: 44 }
 
 /** Posição do time ao fim de cada rodada. O 1º lugar fica no topo. */
-export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime }: Props) {
+export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime, progresso = 1 }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(0)
   const [ativo, setAtivo] = useState<PontoEvolucao | null>(null)
@@ -38,9 +40,11 @@ export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime }: Props) {
   const linhasGrade = [1, 5, 10, 15, 20].filter((p) => p <= quantidadeTimes)
   const passoRodadas = ultimaRodada > 20 ? 5 : ultimaRodada > 10 ? 2 : 1
   const rodadasEixo = pontos.map((p) => p.rodada).filter((r) => r === 1 || r % passoRodadas === 0)
-  const caminho = pontos.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.rodada)},${y(p.posicao)}`).join(' ')
+  const limite = Math.max(1, Math.ceil(progresso * ultimaRodada))
+  const visiveis = pontos.filter((p) => p.rodada <= limite)
+  const caminho = visiveis.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.rodada)},${y(p.posicao)}`).join(' ')
   const ultimo = pontos[pontos.length - 1]
-  const destaque = ativo ?? ultimo
+  const destaque = ativo ?? visiveis[visiveis.length - 1]
 
   function aoMover(evento: React.PointerEvent<SVGRectElement>) {
     const caixa = evento.currentTarget.getBoundingClientRect()
@@ -66,14 +70,14 @@ export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime }: Props) {
             {linhasGrade.map((posicao) => (
               <g key={posicao}>
                 <line x1={MARGEM.esquerda} x2={largura - MARGEM.direita} y1={y(posicao)} y2={y(posicao)} className="stroke-borda" strokeWidth={1} />
-                <text x={MARGEM.esquerda - 8} y={y(posicao)} dy="0.32em" textAnchor="end" className="fill-texto-3 text-[11px] tabular-nums">
+                <text x={MARGEM.esquerda - 8} y={y(posicao)} dy="0.32em" textAnchor="end" className="fill-texto-3 font-mono text-xs">
                   {posicao}º
                 </text>
               </g>
             ))}
 
             {rodadasEixo.map((rodada) => (
-              <text key={rodada} x={x(rodada)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 text-[11px] tabular-nums">
+              <text key={rodada} x={x(rodada)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 font-mono text-xs">
                 {rodada}
               </text>
             ))}
@@ -82,12 +86,12 @@ export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime }: Props) {
               <line x1={x(ativo.rodada)} x2={x(ativo.rodada)} y1={MARGEM.topo} y2={MARGEM.topo + areaAltura} className="stroke-texto-3" strokeWidth={1} />
             )}
 
-            <path d={caminho} fill="none" className="stroke-serie" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            <path d={caminho} fill="none" className="stroke-texto" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
 
-            <circle cx={x(destaque.rodada)} cy={y(destaque.posicao)} r={5} className="fill-serie stroke-superficie" strokeWidth={2} />
+            <circle cx={x(destaque.rodada)} cy={y(destaque.posicao)} r={5} className="fill-texto stroke-superficie" strokeWidth={2} />
 
-            {!ativo && (
-              <text x={x(ultimo.rodada) + 10} y={y(ultimo.posicao)} dy="0.32em" className="fill-texto text-xs font-semibold tabular-nums">
+            {!ativo && progresso >= 1 && (
+              <text x={x(ultimo.rodada) + 10} y={y(ultimo.posicao)} dy="0.32em" className="fill-texto font-mono text-xs font-extrabold">
                 {ultimo.posicao}º
               </text>
             )}
@@ -106,11 +110,11 @@ export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime }: Props) {
 
         {ativo && (
           <div
-            className="pointer-events-none absolute top-0 whitespace-nowrap rounded-md border border-borda bg-superficie px-2.5 py-1.5 text-xs shadow-md"
+            className="pointer-events-none absolute top-0 border-2 border-texto bg-superficie px-2.5 py-1.5 text-xs whitespace-nowrap shadow-[4px_4px_0_#c6f432]"
             style={{ left: dicaX + 8, width: larguraDica }}
           >
-            <div className="text-texto-3">Rodada {ativo.rodada}</div>
-            <div className="font-semibold tabular-nums text-texto">
+            <div className="font-mono font-extrabold text-texto-2">RODADA {ativo.rodada}</div>
+            <div className="font-black tabular-nums text-texto">
               {ativo.posicao}º lugar · {ativo.pontos} pts
             </div>
           </div>

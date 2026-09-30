@@ -2,10 +2,12 @@ import { useSearchParams } from 'react-router'
 import { useEvolucao, useTimes } from '../api/consultas'
 import type { EvolucaoTime, Time } from '../api/tipos'
 import { Abas } from '../componentes/Abas'
-import { Cartao } from '../componentes/Cartao'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
+import { Pagina } from '../componentes/Pagina'
+import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { COR_FUNDO } from '../componentes/coresSeries'
 import { GraficoComparativo, type Medida, type SerieTime } from '../componentes/GraficoComparativo'
+import { useAnimacao } from '../util/animacao'
 import { MAXIMO_TIMES, alternar, escreverSelecao, lerSelecao, type Selecao } from '../util/selecao'
 
 const MEDIDAS: { valor: Medida; rotulo: string }[] = [
@@ -28,10 +30,17 @@ export function PaginaEvolucao() {
   const evolucao = useEvolucao()
   const times = useTimes()
   const medida: Medida = busca.get('medida') === 'pontos' ? 'pontos' : 'posicao'
+  const { progresso, repetir } = useAnimacao(evolucao.data !== undefined && times.data !== undefined)
 
-  if (evolucao.isPending || times.isPending) return <Carregando />
-  if (evolucao.isError || times.isError) return <Erro tentarDeNovo={() => evolucao.refetch()} />
-  if (evolucao.data.every((e) => e.rodadas.length === 0)) return <Vazio>O gráfico aparece depois da primeira rodada.</Vazio>
+  const estado =
+    evolucao.isPending || times.isPending ? (
+      <Carregando />
+    ) : evolucao.isError || times.isError ? (
+      <Erro tentarDeNovo={() => evolucao.refetch()} />
+    ) : evolucao.data.every((e) => e.rodadas.length === 0) ? (
+      <Vazio>O gráfico aparece depois da primeira rodada.</Vazio>
+    ) : null
+  if (estado || !evolucao.data || !times.data) return <Pagina className="pt-9 pb-12">{estado}</Pagina>
 
   const selecao = busca.has('times') ? lerSelecao(busca.get('times')) : selecaoPadrao(evolucao.data)
   const porTime = new Map(evolucao.data.map((e) => [e.timeId, e.rodadas]))
@@ -58,36 +67,39 @@ export function PaginaEvolucao() {
   const cheia = !selecao.includes(null)
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <Pagina className="pt-9 pb-12">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Evolução</h1>
-          <p className="mt-1 text-sm text-texto-2">Compare até {MAXIMO_TIMES} times rodada a rodada.</p>
+          <TituloPagina>Evolução</TituloPagina>
+          <p className="mt-3.5 text-[15px] text-texto-2">Compare até {MAXIMO_TIMES} times rodada a rodada.</p>
         </div>
         <Abas
           rotulo="Medida"
           opcoes={MEDIDAS}
           valor={medida}
-          aoMudar={(v) => atualizar('medida', v === 'posicao' ? null : v)}
+          aoMudar={(v) => {
+            atualizar('medida', v === 'posicao' ? null : v)
+            repetir()
+          }}
         />
       </div>
 
-      <Cartao>
+      <section className="mt-6 border-2 border-texto bg-superficie px-3.5 pt-[18px] pb-2.5">
         {series.length > 0 && (
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 px-4 pt-3 text-xs text-texto-2">
+          <ul className="flex flex-wrap gap-x-[18px] gap-y-2 px-1.5 pb-2.5 text-[13px] font-bold">
             {series.map((s) => (
               <li key={s.time.id} className="flex items-center gap-1.5">
-                <span className={`inline-block h-0.5 w-3 rounded ${COR_FUNDO[s.vaga]}`} />
+                <span className={`inline-block h-[3px] w-3.5 ${COR_FUNDO[s.vaga]}`} />
                 {s.time.nomeCurto}
               </li>
             ))}
           </ul>
         )}
 
-        <GraficoComparativo series={series} medida={medida} quantidadeTimes={times.data.lista.length} />
+        <GraficoComparativo series={series} medida={medida} quantidadeTimes={times.data.lista.length} progresso={progresso} />
 
         {series.length > 0 && (
-          <details className="border-t border-borda px-4 py-2 text-sm">
+          <details className="mt-2 border-t border-borda px-1.5 pt-2 text-sm">
             <summary className="cursor-pointer text-texto-2">Ver dados em tabela</summary>
             <div className="max-h-72 overflow-auto">
               <table className="mt-2 w-full text-center tabular-nums">
@@ -122,10 +134,15 @@ export function PaginaEvolucao() {
             </div>
           </details>
         )}
-      </Cartao>
+      </section>
 
-      <Cartao titulo={`Times (${series.length} de ${MAXIMO_TIMES})`}>
-        <div className="flex flex-wrap gap-2 p-4">
+      <section className="mt-[18px] border-2 border-texto bg-superficie p-[18px]">
+        <Rotulo className="mb-3.5 text-texto-2">
+          <h2>
+            TIMES ({series.length} DE {MAXIMO_TIMES})
+          </h2>
+        </Rotulo>
+        <div className="flex flex-wrap gap-2">
           {opcoes.map((time) => {
             const vaga = selecao.indexOf(time.id)
             const selecionado = vaga >= 0
@@ -136,24 +153,22 @@ export function PaginaEvolucao() {
                 aria-pressed={selecionado}
                 disabled={!selecionado && cheia}
                 onClick={() => atualizar('times', escreverSelecao(alternar(selecao, time.id)))}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                  selecionado
-                    ? 'border-texto-3 bg-superficie-2 font-medium text-texto'
-                    : 'border-borda text-texto-2 enabled:hover:border-texto-3 enabled:hover:text-texto'
+                className={`flex cursor-pointer items-center gap-2 border-2 px-3 py-[7px] text-[13px] font-bold text-texto transition-[translate,scale,background-color] duration-150 enabled:hover:-translate-y-0.5 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  selecionado ? 'border-texto bg-superficie-2' : 'border-borda bg-superficie'
                 }`}
               >
-                {selecionado && <span className={`inline-block size-2.5 rounded-full ${COR_FUNDO[vaga]}`} />}
+                <span className={`inline-block size-2.5 rounded-full ${selecionado ? COR_FUNDO[vaga] : 'bg-borda'}`} />
                 {time.nomeCurto}
               </button>
             )
           })}
         </div>
         {cheia && (
-          <p className="border-t border-borda px-4 py-2 text-xs text-texto-3">
+          <p className="mt-3.5 text-xs text-texto-2">
             Limite de {MAXIMO_TIMES} times. Tire um para escolher outro.
           </p>
         )}
-      </Cartao>
-    </div>
+      </section>
+    </Pagina>
   )
 }

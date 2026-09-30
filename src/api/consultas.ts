@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { obter } from './cliente'
 import type {
   Artilheiro,
@@ -26,6 +26,8 @@ export function useClassificacao(recorte: Recorte, mando: Mando, tempo: Tempo) {
   return useQuery({
     queryKey: ['classificacao', recorte, mando, tempo],
     queryFn: () => obter<Classificacao>('/classificacao', { recorte, mando, tempo }),
+    // Ao trocar o filtro, a tabela antiga fica na tela até a nova chegar, e as linhas deslizam para o lugar novo.
+    placeholderData: keepPreviousData,
   })
 }
 

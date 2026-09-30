@@ -10,8 +10,8 @@ type Props<T extends string> = {
 /** Controle segmentado (ex.: Geral | 1º turno | 2º turno). */
 export function Abas<T extends string>({ rotulo, opcoes, valor, aoMudar }: Props<T>) {
   return (
-    <div role="radiogroup" aria-label={rotulo} className="inline-flex rounded-lg border border-borda bg-superficie p-0.5">
-      {opcoes.map((opcao) => {
+    <div role="radiogroup" aria-label={rotulo} className="inline-flex max-w-full overflow-x-auto border-2 border-texto">
+      {opcoes.map((opcao, indice) => {
         const ativa = opcao.valor === valor
         return (
           <button
@@ -20,9 +20,9 @@ export function Abas<T extends string>({ rotulo, opcoes, valor, aoMudar }: Props
             role="radio"
             aria-checked={ativa}
             onClick={() => aoMudar(opcao.valor)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              ativa ? 'bg-superficie-2 text-texto shadow-sm' : 'text-texto-2 hover:text-texto'
-            }`}
+            className={`cursor-pointer px-3.5 py-[9px] text-[13px] font-extrabold whitespace-nowrap transition-[background-color,transform] duration-200 active:scale-[.96] ${
+              indice > 0 ? 'border-l-2 border-texto' : ''
+            } ${ativa ? 'bg-texto text-texto-invertido' : 'bg-superficie text-texto'}`}
           >
             {opcao.rotulo}
           </button>

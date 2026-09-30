@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Layout } from './componentes/Layout'
+import { ProvedorPreferencias } from './componentes/Preferencias'
 import './index.css'
 import { PaginaArtilharia } from './paginas/PaginaArtilharia'
 import { PaginaChances } from './paginas/PaginaChances'
@@ -21,20 +22,22 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<PaginaClassificacao />} />
-            <Route path="times/:timeId" element={<PaginaTime />} />
-            <Route path="chances" element={<PaginaChances />} />
-            <Route path="evolucao" element={<PaginaEvolucao />} />
-            <Route path="tempos" element={<PaginaTempos />} />
-            <Route path="confronto" element={<PaginaConfronto />} />
-            <Route path="artilharia" element={<PaginaArtilharia />} />
-            <Route path="*" element={<PaginaNaoEncontrada />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <ProvedorPreferencias>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route index element={<PaginaClassificacao />} />
+              <Route path="times/:timeId" element={<PaginaTime />} />
+              <Route path="chances" element={<PaginaChances />} />
+              <Route path="evolucao" element={<PaginaEvolucao />} />
+              <Route path="tempos" element={<PaginaTempos />} />
+              <Route path="confronto" element={<PaginaConfronto />} />
+              <Route path="artilharia" element={<PaginaArtilharia />} />
+              <Route path="*" element={<PaginaNaoEncontrada />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ProvedorPreferencias>
     </QueryClientProvider>
   </StrictMode>,
 )
