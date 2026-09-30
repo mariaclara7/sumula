@@ -67,7 +67,8 @@ export function PaginaTime() {
             <div className="font-mono text-xs font-extrabold tracking-[2px] opacity-75">
               OVR {contar(nota, progresso)} · {faixaDaNota(nota).nome}
             </div>
-            <h1 className="mt-1.5 text-[40px] leading-[.9] font-black tracking-[-2px] uppercase md:text-[64px]">
+            {/* Nomes como "Athletico Paranaense" não cabem em 40px num celular: o tamanho acompanha a tela. */}
+            <h1 className="mt-1.5 text-[clamp(22px,7.5vw,40px)] leading-[.9] font-black tracking-[-2px] break-words hyphens-auto uppercase md:text-[64px]">
               {time.nomeCurto}
             </h1>
           </div>

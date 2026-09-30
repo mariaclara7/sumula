@@ -90,7 +90,8 @@ export function PaginaConfronto() {
         <Erro tentarDeNovo={() => confronto.refetch()} />
       ) : (
         <>
-          <div className="corte-duplo mt-[18px] grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-grafite px-5 py-7 text-creme">
+          {/* minmax(0,1fr): um nome longo não pode alargar a coluna além do card. */}
+          <div className="corte-duplo mt-[18px] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 bg-grafite px-5 py-7 text-creme">
             <Lado time={a} nota={nota(a.id)} corNota="bg-lima" />
             <div className="flex flex-col items-center gap-2">
               <div className="flex items-center gap-2.5 text-[40px] leading-none font-black tracking-[-2px] tabular-nums md:gap-[22px] md:text-[72px]">
@@ -137,7 +138,9 @@ function Lado({ time, nota, corNota }: { time: Time; nota: React.ReactNode; corN
       <span className="hidden md:block">
         <Escudo time={time} tamanho={88} circulo contorno="0 0 0 3px #f2f1ec" />
       </span>
-      <span className="text-center text-xl font-black break-words">{time.nomeCurto}</span>
+      <span className="w-full truncate text-center text-base font-black md:text-xl md:whitespace-normal md:break-words">
+        {time.nomeCurto}
+      </span>
       <span className={`px-2 py-[3px] font-mono text-xs font-extrabold text-grafite ${corNota}`}>OVR {nota}</span>
     </Link>
   )
@@ -239,10 +242,10 @@ type SeletorProps = {
 function SeletorTime({ rotulo, times, time, bloqueado, aoMudar }: SeletorProps) {
   const opcoes = [...times].sort((x, y) => x.nomeCurto.localeCompare(y.nomeCurto, 'pt-BR'))
   return (
-    <label className="relative flex cursor-pointer items-center gap-3 border-2 border-texto bg-superficie px-3.5 py-2.5 focus-within:shadow-[4px_4px_0_#c6f432]">
-      <span className="font-mono text-[11px] font-extrabold text-texto-2">{rotulo}</span>
+    <label className="relative flex min-w-0 cursor-pointer items-center gap-3 border-2 border-texto bg-superficie px-3.5 py-2.5 focus-within:shadow-[4px_4px_0_#c6f432]">
+      <span className="flex-none font-mono text-[11px] font-extrabold whitespace-nowrap text-texto-2">{rotulo}</span>
       {time && <Escudo time={time} tamanho={28} />}
-      <span className="truncate text-base font-extrabold">{time?.nomeCurto ?? 'Escolha um time'}</span>
+      <span className="min-w-0 truncate text-base font-extrabold">{time?.nomeCurto ?? 'Escolha um time'}</span>
       <span aria-hidden className="ml-auto text-xs">
         ▼
       </span>

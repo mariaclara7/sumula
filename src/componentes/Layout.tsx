@@ -110,13 +110,14 @@ function BotaoTema() {
       type="button"
       onClick={alternarTema}
       aria-label={escuro ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
-      className="flex h-9 cursor-pointer items-center gap-2 rounded-full border border-linha-escura px-3 text-xs font-bold transition-[border-color,transform] duration-200 hover:border-lima active:scale-[.94]"
+      className="flex h-9 flex-none cursor-pointer items-center gap-2 rounded-full border border-linha-escura px-3 text-xs font-bold transition-[border-color,transform] duration-200 hover:border-lima active:scale-[.94]"
     >
       <span
         aria-hidden
         className={`size-3.5 rounded-full border-2 border-lima transition-colors duration-300 ${escuro ? 'bg-lima' : 'bg-transparent'}`}
       />
-      {escuro ? 'Claro' : 'Escuro'}
+      {/* Em celulares bem estreitos fica só a bolinha; o aria-label continua dizendo o que o botão faz. */}
+      <span className="hidden min-[360px]:inline">{escuro ? 'Claro' : 'Escuro'}</span>
     </button>
   )
 }
