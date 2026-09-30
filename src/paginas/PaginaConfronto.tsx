@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router'
-import { useClassificacao, useConfronto, useProbabilidades, useTimes } from '../api/consultas'
+import { useClassificacao, useConfronto, usePalpites, useProbabilidades, useTimes } from '../api/consultas'
 import type { LinhaClassificacao, ProbabilidadesTime, Time } from '../api/tipos'
 import { Cartao } from '../componentes/Cartao'
 import { Escudo } from '../componentes/Escudo'
@@ -33,6 +33,7 @@ export function PaginaConfronto() {
   const times = useTimes()
   const tabela = useClassificacao('geral', 'todos', 'jogoTodo')
   const probabilidades = useProbabilidades()
+  const palpites = usePalpites()
 
   // Sem escolha na URL: o "meu time" (ou o líder) contra o líder (ou o vice).
   const ordem = tabela.data?.linhas.map((l) => l.time.id) ?? times.data?.lista.map((t) => t.id) ?? []
@@ -117,6 +118,7 @@ export function PaginaConfronto() {
               partidas={confronto.data.partidas}
               times={times.data.porId}
               perspectiva={a.id}
+              palpites={palpites.data}
               vazio="Ainda não se enfrentaram nesta temporada."
             />
           </Cartao>

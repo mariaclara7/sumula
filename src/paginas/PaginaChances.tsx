@@ -6,6 +6,7 @@ import { CartaoDestaque } from '../componentes/CartaoDestaque'
 import { Escudo } from '../componentes/Escudo'
 import { BotaoPrincipal, Carregando, Erro, Vazio } from '../componentes/Estado'
 import { Pagina } from '../componentes/Pagina'
+import { SecaoMatematica } from '../componentes/SecaoMatematica'
 import { TituloPagina } from '../componentes/TituloPagina'
 import { FAIXAS_CHANCES, chanceNaFaixa, type Zona } from '../config'
 import { usePreferencias } from '../preferencias'
@@ -153,6 +154,7 @@ export function PaginaChances() {
         </div>
       )}
       {conteudo()}
+      <SecaoMatematica />
     </Pagina>
   )
 }

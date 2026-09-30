@@ -150,3 +150,70 @@ export type Artilheiro = {
   assistencias: number | null
   penaltis: number | null
 }
+
+export type Placar = {
+  mandante: number
+  visitante: number
+}
+
+/** Palpite da Súmula para um jogo que ainda não aconteceu. */
+export type Palpite = {
+  partidaId: number
+  golsEsperadosMandante: number
+  golsEsperadosVisitante: number
+  vitoriaMandante: number
+  empate: number
+  vitoriaVisitante: number
+  placarMaisProvavel: Placar
+}
+
+export type SituacaoMatematica = {
+  time: Time
+  posicao: number
+  pontos: number
+  jogosRestantes: number
+  pontosMaximos: number
+  melhorPosicaoPossivel: number
+  piorPosicaoPossivel: number
+  /** Índice k-1: total de pontos que garante terminar entre os k primeiros. */
+  pontosParaGarantir: number[]
+}
+
+export type TipoSequencia = 'vitorias' | 'invencibilidade' | 'semVencer' | 'derrotas' | 'marcando' | 'semSofrerGol'
+
+export type Sequencia = {
+  tipo: TipoSequencia
+  atual: number
+  maior: number
+}
+
+export type PerfilGols = {
+  jogos: number
+  golsPro: number
+  golsContra: number
+  semSofrerGol: number
+  semMarcar: number
+  maisDeDoisGolsEMeio: number
+  ambosMarcam: number
+}
+
+export type EstatisticasTime = {
+  time: Time
+  gols: PerfilGols
+  sequencias: Sequencia[]
+}
+
+export type ResumoLiga = {
+  jogos: number
+  gols: number
+  vitoriasMandante: number
+  empates: number
+  vitoriasVisitante: number
+  maisDeDoisGolsEMeio: number
+  ambosMarcam: number
+}
+
+export type ResultadoEstatisticas = {
+  liga: ResumoLiga
+  times: EstatisticasTime[]
+}

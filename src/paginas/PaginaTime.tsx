@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router'
-import { useProbabilidades, useResumoTime, useTempos, useTimes } from '../api/consultas'
+import { usePalpites, useProbabilidades, useResumoTime, useTempos, useTimes } from '../api/consultas'
 import type { LinhaClassificacao } from '../api/tipos'
 import { Cartao } from '../componentes/Cartao'
 import { Escudo } from '../componentes/Escudo'
@@ -10,6 +10,7 @@ import { GraficoFaixas } from '../componentes/GraficoFaixas'
 import { GraficoPosicoesFinais } from '../componentes/GraficoPosicoesFinais'
 import { ListaPartidas } from '../componentes/ListaPartidas'
 import { MatrizIntervalo } from '../componentes/MatrizIntervalo'
+import { NumerosDoTime } from '../componentes/NumerosDoTime'
 import { Pagina } from '../componentes/Pagina'
 import { Rotulo } from '../componentes/TituloPagina'
 import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
@@ -25,6 +26,7 @@ export function PaginaTime() {
   const timeId = Number(useParams().timeId)
   const resumo = useResumoTime(timeId)
   const times = useTimes()
+  const palpites = usePalpites()
   const { progresso } = useAnimacao(resumo.data !== undefined && times.data !== undefined)
 
   if (resumo.isPending || times.isPending) return <Pagina className="pt-9 pb-12"><Carregando /></Pagina>
@@ -146,6 +148,8 @@ export function PaginaTime() {
           </div>
         </Cartao>
 
+        <NumerosDoTime timeId={time.id} />
+
         <TemposDoTime timeId={time.id} nomeTime={time.nomeCurto} />
 
         <div className="grid gap-[18px] md:grid-cols-2">
@@ -158,7 +162,12 @@ export function PaginaTime() {
             />
           </Cartao>
           <Cartao titulo="Próximos jogos">
-            <ListaPartidas partidas={resumo.data.proximasPartidas} times={times.data.porId} vazio="Nenhum jogo agendado." />
+            <ListaPartidas
+              partidas={resumo.data.proximasPartidas}
+              times={times.data.porId}
+              palpites={palpites.data}
+              vazio="Nenhum jogo agendado."
+            />
           </Cartao>
         </div>
       </Pagina>

@@ -8,7 +8,9 @@ import { Pagina } from './Pagina'
 
 const LINKS = [
   { para: '/', rotulo: 'Classificação' },
+  { para: '/simulador', rotulo: 'Simulador' },
   { para: '/chances', rotulo: 'Chances' },
+  { para: '/estatisticas', rotulo: 'Estatísticas' },
   { para: '/evolucao', rotulo: 'Evolução' },
   { para: '/tempos', rotulo: '1º x 2º tempo' },
   { para: '/confronto', rotulo: 'Comparador' },

@@ -5,11 +5,15 @@ import type {
   Classificacao,
   EvolucaoTime,
   Mando,
+  Palpite,
+  Partida,
   Recorte,
+  ResultadoEstatisticas,
   ResultadoSimulacao,
   ResultadoTempos,
   ResumoConfronto,
   ResumoTime,
+  SituacaoMatematica,
   Tempo,
   Time,
 } from './tipos'
@@ -71,5 +75,35 @@ export function useProbabilidades() {
   return useQuery({
     queryKey: ['probabilidades'],
     queryFn: () => obter<ResultadoSimulacao>('/probabilidades'),
+  })
+}
+
+export function usePartidas() {
+  return useQuery({
+    queryKey: ['partidas'],
+    queryFn: () => obter<Partida[]>('/partidas'),
+  })
+}
+
+/** Palpites de todos os jogos restantes, indexados pelo id da partida. */
+export function usePalpites() {
+  return useQuery({
+    queryKey: ['palpites'],
+    queryFn: () => obter<Palpite[]>('/palpites'),
+    select: (palpites) => new Map(palpites.map((p) => [p.partidaId, p])),
+  })
+}
+
+export function useMatematica() {
+  return useQuery({
+    queryKey: ['matematica'],
+    queryFn: () => obter<SituacaoMatematica[]>('/matematica'),
+  })
+}
+
+export function useEstatisticas() {
+  return useQuery({
+    queryKey: ['estatisticas'],
+    queryFn: () => obter<ResultadoEstatisticas>('/estatisticas'),
   })
 }

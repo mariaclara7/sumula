@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
-import type { Partida, Time } from '../api/tipos'
+import type { Palpite, Partida, Time } from '../api/tipos'
 import { formatarDataPartida, resultadoPara } from '../util/formato'
+import { BarraPalpite } from './BarraPalpite'
 import { Escudo } from './Escudo'
 import { COR_PLACAR } from './FormaRecente'
 
@@ -10,6 +11,8 @@ type Props = {
   vazio?: string
   /** Time cujo resultado pinta o placar (vitória, empate ou derrota). */
   perspectiva?: number
+  /** Palpites da Súmula; aparecem embaixo dos jogos que ainda não aconteceram. */
+  palpites?: Map<number, Palpite>
 }
 
 const STATUS: Partial<Record<Partida['status'], string>> = {
@@ -18,7 +21,7 @@ const STATUS: Partial<Record<Partida['status'], string>> = {
   cancelada: 'Cancelada',
 }
 
-export function ListaPartidas({ partidas, times, vazio = 'Nenhuma partida.', perspectiva }: Props) {
+export function ListaPartidas({ partidas, times, vazio = 'Nenhuma partida.', perspectiva, palpites }: Props) {
   if (partidas.length === 0) return <p className="border-t border-borda px-4 py-6 text-sm text-texto-2">{vazio}</p>
 
   return (
@@ -28,6 +31,7 @@ export function ListaPartidas({ partidas, times, vazio = 'Nenhuma partida.', per
         const visitante = times.get(partida.visitanteId)
         if (!mandante || !visitante) return null
         const resultado = perspectiva === undefined ? undefined : resultadoPara(partida, perspectiva)
+        const palpite = partida.temResultado ? undefined : palpites?.get(partida.id)
 
         return (
           <li key={partida.id} className="border-t border-borda px-4 py-3">
@@ -52,6 +56,7 @@ export function ListaPartidas({ partidas, times, vazio = 'Nenhuma partida.', per
                 <span className="truncate">{visitante.nomeCurto}</span>
               </Link>
             </div>
+            {palpite && <BarraPalpite palpite={palpite} mandante={mandante} visitante={visitante} />}
           </li>
         )
       })}
