@@ -16,6 +16,15 @@ jobs:
   publicar:
     runs-on: ubuntu-latest
     steps:
+      # Enquanto a Cloudflare não estiver configurada, o workflow só testa e gera o site, sem falhar.
+      - name: Verifica a configuração
+        id: config
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$CONTA" ]; then echo "pronto=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::Faltam os secrets CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID: o site não será publicado (veja o README)."; fi
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CONTA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -29,6 +38,7 @@ jobs:
           VITE_API_URL: ${{ vars.SUMULA_API_URL }}
           VITE_API_ESTATICA: "true"
       - name: Publica na Cloudflare
+        if: steps.config.outputs.pronto == 'true'
         run: npx --yes wrangler@4 deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
