@@ -1,7 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { useProbabilidades, useResumoTime, useTempos, useTimes } from '../api/consultas'
 import type { LinhaClassificacao } from '../api/tipos'
-import { BarraChance } from '../componentes/BarraChance'
 import { Cartao } from '../componentes/Cartao'
 import { Escudo } from '../componentes/Escudo'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
@@ -11,24 +10,39 @@ import { GraficoFaixas } from '../componentes/GraficoFaixas'
 import { GraficoPosicoesFinais } from '../componentes/GraficoPosicoesFinais'
 import { ListaPartidas } from '../componentes/ListaPartidas'
 import { MatrizIntervalo } from '../componentes/MatrizIntervalo'
+import { Pagina } from '../componentes/Pagina'
+import { Rotulo } from '../componentes/TituloPagina'
 import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
-import { formatarPercentual, formatarSaldo } from '../util/formato'
+import { contar, useAnimacao } from '../util/animacao'
+import { coresDoTime } from '../util/cores'
+import { formatarChance, formatarPercentual, formatarSaldo } from '../util/formato'
+import { faixaDaNota, notaDoTime } from '../util/notas'
+
+// Cor da barra de cada faixa; a do título usa a cor do texto, como no design.
+const COR_FAIXA: Record<string, string> = { Título: 'bg-texto' }
 
 export function PaginaTime() {
   const timeId = Number(useParams().timeId)
   const resumo = useResumoTime(timeId)
   const times = useTimes()
+  const { progresso } = useAnimacao(resumo.data !== undefined && times.data !== undefined)
 
-  if (resumo.isPending || times.isPending) return <Carregando />
+  if (resumo.isPending || times.isPending) return <Pagina className="pt-9 pb-12"><Carregando /></Pagina>
   if (resumo.isError || times.isError) {
-    return (resumo.error as { status?: number } | null)?.status === 404 ? (
-      <Vazio>Time não encontrado nesta competição.</Vazio>
-    ) : (
-      <Erro tentarDeNovo={() => resumo.refetch()} />
+    return (
+      <Pagina className="pt-9 pb-12">
+        {(resumo.error as { status?: number } | null)?.status === 404 ? (
+          <Vazio>Time não encontrado nesta competição.</Vazio>
+        ) : (
+          <Erro tentarDeNovo={() => resumo.refetch()} />
+        )}
+      </Pagina>
     )
   }
 
   const { time, geral } = resumo.data
+  const cores = coresDoTime(time)
+  const nota = notaDoTime(geral.aproveitamento)
   const recortes: [string, LinhaClassificacao][] = [
     ['Geral', resumo.data.geral],
     ['Em casa', resumo.data.casa],
@@ -36,87 +50,122 @@ export function PaginaTime() {
     ['1º turno', resumo.data.primeiroTurno],
     ['2º turno', resumo.data.segundoTurno],
   ]
+  const quantidadeTimes = times.data.lista.length
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Escudo time={time} tamanho="g" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{time.nome}</h1>
-          <Link to={`/confronto?a=${time.id}`} className="text-sm text-destaque hover:underline">
+    <div>
+      <div className="transition-colors duration-300" style={{ background: cores.principal, color: cores.secundaria }}>
+        <Pagina className="flex flex-wrap items-center gap-5 py-8">
+          <Escudo
+            time={time}
+            tamanho={88}
+            circulo
+            invertido
+            contorno={`0 0 0 4px ${cores.principal}, 0 0 0 6px ${cores.secundaria}`}
+          />
+          <div className="min-w-[200px] flex-1">
+            <div className="font-mono text-xs font-extrabold tracking-[2px] opacity-75">
+              OVR {contar(nota, progresso)} · {faixaDaNota(nota).nome}
+            </div>
+            <h1 className="mt-1.5 text-[40px] leading-[.9] font-black tracking-[-2px] uppercase md:text-[64px]">
+              {time.nomeCurto}
+            </h1>
+          </div>
+          <Link
+            to={`/confronto?a=${time.id}`}
+            className="border-2 border-grafite bg-lima px-4 py-3 text-sm font-extrabold text-grafite shadow-[4px_4px_0_#111] transition-[translate,box-shadow] duration-75 hover:text-grafite active:translate-x-1 active:translate-y-1 active:shadow-none"
+          >
             Comparar com outro time →
           </Link>
-        </div>
+        </Pagina>
       </div>
 
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Indicador rotulo="Posição" valor={`${geral.posicao}º`} />
-        <Indicador rotulo="Pontos" valor={String(geral.pontos)} />
-        <Indicador rotulo="Aproveitamento" valor={formatarPercentual(geral.aproveitamento)} />
-        <Indicador rotulo="Saldo de gols" valor={formatarSaldo(geral.saldo)} />
-      </dl>
+      <Pagina className="flex flex-col gap-[18px] pt-6 pb-12">
+        <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Indicador
+            rotulo="POSIÇÃO"
+            valor={`${Math.max(1, Math.round(quantidadeTimes - (quantidadeTimes - geral.posicao) * progresso))}º`}
+          />
+          <Indicador rotulo="PONTOS" valor={String(contar(geral.pontos, progresso))} />
+          <Indicador rotulo="APROVEITAMENTO" valor={formatarPercentual(Math.round(geral.aproveitamento * progresso * 10) / 10)} />
+          <Indicador rotulo="SALDO DE GOLS" valor={formatarSaldo(contar(geral.saldo, progresso))} />
+        </dl>
 
-      <Cartao titulo="Posição rodada a rodada">
-        <GraficoEvolucao pontos={resumo.data.evolucao} quantidadeTimes={times.data.lista.length} nomeTime={time.nomeCurto} />
-        <p className="border-t border-borda px-4 py-2 text-xs">
-          <Link to={`/evolucao?times=${time.id}`} className="text-destaque hover:underline">
-            Comparar a evolução com outros times
+        <Cartao titulo="Posição rodada a rodada">
+          <div className="px-2.5 pt-3 pb-1.5">
+            <GraficoEvolucao
+              pontos={resumo.data.evolucao}
+              quantidadeTimes={quantidadeTimes}
+              nomeTime={time.nomeCurto}
+              progresso={progresso}
+            />
+          </div>
+          <Link
+            to={`/evolucao?times=${time.id}`}
+            className="block border-t border-borda px-4 py-3 text-[13px] font-bold text-destaque hover:underline"
+          >
+            Comparar a evolução com outros times →
           </Link>
-        </p>
-      </Cartao>
+        </Cartao>
 
-      <ChancesDoTime timeId={time.id} nomeTime={time.nomeCurto} />
+        <ChancesDoTime timeId={time.id} nomeTime={time.nomeCurto} progresso={progresso} />
 
-      <Cartao titulo="Desempenho">
-        <div className="overflow-x-auto">
-          <table className="w-full whitespace-nowrap text-sm tabular-nums">
-            <thead className="border-b border-borda text-xs text-texto-3">
-              <tr>
-                <th scope="col" className="px-4 py-2 text-left font-medium">Recorte</th>
-                <th scope="col" className="px-2 py-2 font-medium">Pontos</th>
-                <th scope="col" className="px-2 py-2 font-medium">Jogos</th>
-                <th scope="col" className="px-2 py-2 font-medium">V-E-D</th>
-                <th scope="col" className="px-2 py-2 font-medium">Gols</th>
-                <th scope="col" className="px-2 py-2 font-medium">Aproveitamento</th>
-                <th scope="col" className="px-2 py-2 font-medium">Últimos 5</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-borda text-center">
-              {recortes.map(([rotulo, linha]) => (
-                <tr key={rotulo}>
-                  <th scope="row" className="px-4 py-2 text-left font-medium">{rotulo}</th>
-                  <td className="px-2 py-2 font-bold">{linha.pontos}</td>
-                  <td className="px-2 py-2">{linha.jogos}</td>
-                  <td className="px-2 py-2">{`${linha.vitorias}-${linha.empates}-${linha.derrotas}`}</td>
-                  <td className="px-2 py-2">{`${linha.golsPro}:${linha.golsContra}`}</td>
-                  <td className="px-2 py-2">{formatarPercentual(linha.aproveitamento)}</td>
-                  <td className="px-2 py-2">
-                    <div className="flex justify-center">
-                      <FormaRecente resultados={linha.ultimosResultados} />
-                    </div>
-                  </td>
+        <Cartao titulo="Desempenho">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-center">
+              <thead className="font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2">
+                <tr className="h-[34px]">
+                  <th scope="col" className="px-4 text-left font-extrabold">RECORTE</th>
+                  <th scope="col" className="w-[70px] font-extrabold">PTS</th>
+                  <th scope="col" className="w-[60px] font-extrabold">J</th>
+                  <th scope="col" className="w-20 font-extrabold">V-E-D</th>
+                  <th scope="col" className="w-[70px] font-extrabold">GOLS</th>
+                  <th scope="col" className="w-[110px] font-extrabold">APROV.</th>
+                  <th scope="col" className="w-[150px] pr-4 font-extrabold">ÚLTIMOS 5</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="font-mono text-[13px] font-medium">
+                {recortes.map(([rotulo, linha]) => (
+                  <tr key={rotulo} className="h-[46px] border-t border-borda">
+                    <th scope="row" className="px-4 text-left font-sans text-base font-bold">{rotulo}</th>
+                    <td className="font-sans text-lg font-black">{linha.pontos}</td>
+                    <td>{linha.jogos}</td>
+                    <td>{`${linha.vitorias}-${linha.empates}-${linha.derrotas}`}</td>
+                    <td>{`${linha.golsPro}:${linha.golsContra}`}</td>
+                    <td>{formatarPercentual(linha.aproveitamento)}</td>
+                    <td className="pr-4">
+                      <div className="flex justify-center">
+                        <FormaRecente resultados={linha.ultimosResultados} tamanho="m" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Cartao>
+
+        <TemposDoTime timeId={time.id} nomeTime={time.nomeCurto} />
+
+        <div className="grid gap-[18px] md:grid-cols-2">
+          <Cartao titulo="Últimos jogos">
+            <ListaPartidas
+              partidas={resumo.data.ultimasPartidas}
+              times={times.data.porId}
+              perspectiva={time.id}
+              vazio="Nenhum jogo disputado."
+            />
+          </Cartao>
+          <Cartao titulo="Próximos jogos">
+            <ListaPartidas partidas={resumo.data.proximasPartidas} times={times.data.porId} vazio="Nenhum jogo agendado." />
+          </Cartao>
         </div>
-      </Cartao>
-
-      <TemposDoTime timeId={time.id} nomeTime={time.nomeCurto} />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Cartao titulo="Últimos jogos">
-          <ListaPartidas partidas={resumo.data.ultimasPartidas} times={times.data.porId} vazio="Nenhum jogo disputado." />
-        </Cartao>
-        <Cartao titulo="Próximos jogos">
-          <ListaPartidas partidas={resumo.data.proximasPartidas} times={times.data.porId} vazio="Nenhum jogo agendado." />
-        </Cartao>
-      </div>
+      </Pagina>
     </div>
   )
 }
 
-function ChancesDoTime({ timeId, nomeTime }: { timeId: number; nomeTime: string }) {
+function ChancesDoTime({ timeId, nomeTime, progresso }: { timeId: number; nomeTime: string; progresso: number }) {
   const { data, isPending, isError } = useProbabilidades()
   const chances = data?.times.find((t) => t.time.id === timeId)
 
@@ -128,30 +177,43 @@ function ChancesDoTime({ timeId, nomeTime }: { timeId: number; nomeTime: string 
         <Carregando />
       ) : (
         <>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-4 py-4 sm:grid-cols-3 lg:grid-cols-6">
-            {FAIXAS_CHANCES.map((faixa) => (
-              <div key={faixa.nome}>
-                <dt className="mb-1 text-xs text-texto-3">{faixa.nome}</dt>
-                <dd className="text-lg font-semibold">
-                  <BarraChance chance={chanceNaFaixa(chances.posicoes, faixa)} cor={faixa.cor} alinhamento="esquerda" />
-                </dd>
-              </div>
-            ))}
+          <dl className="grid grid-cols-2 gap-4 p-4 md:grid-cols-6">
+            {FAIXAS_CHANCES.map((faixa) => {
+              const chance = chanceNaFaixa(chances.posicoes, faixa)
+              return (
+                <div key={faixa.nome}>
+                  <dt className="text-xs text-texto-2">{faixa.nome}</dt>
+                  <dd className="mt-0.5 mb-1.5 text-[26px] font-black">{formatarChance(chance)}</dd>
+                  <dd className="h-1.5 bg-superficie-2">
+                    {chance > 0 && (
+                      <div
+                        className={`h-full ${COR_FAIXA[faixa.nome] ?? faixa.cor}`}
+                        style={{ width: `max(${chance * 100 * progresso}%, 2px)` }}
+                      />
+                    )}
+                  </dd>
+                </div>
+              )
+            })}
             <div>
-              <dt className="mb-1 text-xs text-texto-3">Pontos esperados</dt>
-              <dd className="text-lg font-semibold tabular-nums">{Math.round(chances.pontosEsperados)}</dd>
+              <dt className="text-xs text-texto-2">Pontos esperados</dt>
+              <dd className="mt-0.5 text-[26px] font-black tabular-nums">{contar(chances.pontosEsperados, progresso)}</dd>
             </div>
           </dl>
-          <h3 className="border-t border-borda px-4 pt-3 text-xs font-medium text-texto-3">Posição final</h3>
-          <GraficoPosicoesFinais posicoes={chances.posicoes} nomeTime={nomeTime} />
+          <div className="px-4 pt-1.5 pb-4">
+            <Rotulo className="mb-2.5 text-[11px] tracking-[1.5px] text-texto-2">
+              <h3>POSIÇÃO FINAL</h3>
+            </Rotulo>
+            <GraficoPosicoesFinais posicoes={chances.posicoes} nomeTime={nomeTime} progresso={progresso} />
+            <p className="mt-3 text-xs text-texto-2">
+              Baseado em {data.simulacoes.toLocaleString('pt-BR')} simulações dos jogos restantes.{' '}
+              <Link to="/chances" className="font-bold text-destaque hover:underline">
+                Ver todos os times
+              </Link>
+            </p>
+          </div>
         </>
       )}
-      <p className="border-t border-borda px-4 py-2 text-xs text-texto-3">
-        Baseado em {data?.simulacoes.toLocaleString('pt-BR') ?? 'milhares de'} simulações dos jogos restantes.{' '}
-        <Link to="/chances" className="text-destaque hover:underline">
-          Ver todos os times
-        </Link>
-      </p>
     </Cartao>
   )
 }
@@ -168,63 +230,41 @@ function TemposDoTime({ timeId, nomeTime }: { timeId: number; nomeTime: string }
         <Carregando />
       ) : (
         <>
-          <div className="grid gap-4 px-4 py-4 md:grid-cols-2">
-            <table className="w-full text-center text-sm tabular-nums">
-              <caption className="sr-only">Gols por tempo</caption>
-              <thead className="text-xs text-texto-3">
-                <tr>
-                  <th scope="col" className="py-1 text-left font-medium">
-                    Gols
-                  </th>
-                  <th scope="col" className="py-1 font-medium">
-                    Marcados
-                  </th>
-                  <th scope="col" className="py-1 font-medium">
-                    Sofridos
-                  </th>
-                  <th scope="col" className="py-1 font-medium">
-                    Saldo
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-borda">
-                {(
-                  [
-                    ['1º tempo', tempos.golsProPrimeiroTempo, tempos.golsContraPrimeiroTempo],
-                    ['2º tempo', tempos.golsProSegundoTempo, tempos.golsContraSegundoTempo],
-                  ] as const
-                ).map(([rotulo, pro, contra]) => (
-                  <tr key={rotulo}>
-                    <th scope="row" className="py-2 text-left font-medium">
-                      {rotulo}
-                    </th>
-                    <td className="py-2">{pro}</td>
-                    <td className="py-2">{contra}</td>
-                    <td className="py-2 font-semibold">{formatarSaldo(pro - contra)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-              <Destaque
-                rotulo="Pontos depois do intervalo"
-                valor={formatarSaldo(tempos.pontosDepoisDoIntervalo)}
-                detalhe={`${tempos.pontosNoIntervalo} no intervalo → ${tempos.pontos} no fim`}
-              />
-              <Destaque rotulo="Viradas" valor={`${tempos.viradasAFavor} / ${tempos.viradasContra}`} detalhe="a favor / sofridas" />
-              <Destaque
-                rotulo="Pontos cedidos vencendo"
-                valor={String(tempos.pontosPerdidosVencendo)}
-                detalhe="em jogos que vencia no intervalo"
-              />
-              <Destaque
-                rotulo="Pontos buscados perdendo"
-                valor={String(tempos.pontosConquistadosPerdendo)}
-                detalhe="em jogos que perdia no intervalo"
-              />
-            </dl>
-          </div>
+          <dl className="grid grid-cols-2 gap-4 p-4 md:grid-cols-3 lg:grid-cols-6">
+            <Destaque
+              rotulo="Gols no 1º tempo"
+              valor={`${tempos.golsProPrimeiroTempo}:${tempos.golsContraPrimeiroTempo}`}
+              detalhe="marcados : sofridos"
+            />
+            <Destaque
+              rotulo="Gols no 2º tempo"
+              valor={`${tempos.golsProSegundoTempo}:${tempos.golsContraSegundoTempo}`}
+              detalhe="marcados : sofridos"
+            />
+            <Destaque
+              rotulo="Pontos depois do intervalo"
+              valor={formatarSaldo(tempos.pontosDepoisDoIntervalo)}
+              detalhe={`${tempos.pontosNoIntervalo} no intervalo → ${tempos.pontos} no fim`}
+              cor={
+                tempos.pontosDepoisDoIntervalo > 0
+                  ? 'text-verde'
+                  : tempos.pontosDepoisDoIntervalo < 0
+                    ? 'text-vermelho'
+                    : undefined
+              }
+            />
+            <Destaque rotulo="Viradas" valor={`${tempos.viradasAFavor} / ${tempos.viradasContra}`} detalhe="a favor / sofridas" />
+            <Destaque
+              rotulo="Pontos cedidos vencendo"
+              valor={String(tempos.pontosPerdidosVencendo)}
+              detalhe="em jogos que vencia no intervalo"
+            />
+            <Destaque
+              rotulo="Pontos buscados perdendo"
+              valor={String(tempos.pontosConquistadosPerdendo)}
+              detalhe="em jogos que perdia no intervalo"
+            />
+          </dl>
 
           <div className="border-t border-borda px-2 py-3 sm:px-4">
             <MatrizIntervalo transicoes={tempos.transicoes} />
@@ -232,26 +272,29 @@ function TemposDoTime({ timeId, nomeTime }: { timeId: number; nomeTime: string }
 
           {tempos.faixas && data && (
             <div className="border-t border-borda">
-              <h3 className="px-4 pt-3 text-xs font-medium text-texto-3">Gols por faixa de minuto</h3>
+              <Rotulo className="px-4 pt-3 text-[11px] tracking-[1.5px] text-texto-2">
+                <h3>GOLS POR FAIXA DE MINUTO</h3>
+              </Rotulo>
               <GraficoFaixas faixas={tempos.faixas} rotulos={data.rotulosFaixas} nomeTime={nomeTime} />
             </div>
           )}
         </>
       )}
-      <p className="border-t border-borda px-4 py-2 text-xs text-texto-3">
-        <Link to="/tempos" className="text-destaque hover:underline">
-          Comparar com os outros times
-        </Link>
-      </p>
+      <Link
+        to="/tempos"
+        className="block border-t border-borda px-4 py-3 text-[13px] font-bold text-destaque hover:underline"
+      >
+        Comparar com os outros times →
+      </Link>
     </Cartao>
   )
 }
 
-function Destaque({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe: string }) {
+function Destaque({ rotulo, valor, detalhe, cor }: { rotulo: string; valor: string; detalhe: string; cor?: string }) {
   return (
     <div>
-      <dt className="text-xs text-texto-3">{rotulo}</dt>
-      <dd className="text-lg font-semibold tabular-nums">{valor}</dd>
+      <dt className="text-xs text-texto-2">{rotulo}</dt>
+      <dd className={`text-[26px] font-black tabular-nums ${cor ?? ''}`}>{valor}</dd>
       <dd className="text-xs text-texto-2">{detalhe}</dd>
     </div>
   )
@@ -259,9 +302,9 @@ function Destaque({ rotulo, valor, detalhe }: { rotulo: string; valor: string; d
 
 function Indicador({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
-    <div className="rounded-xl border border-borda bg-superficie px-4 py-3">
-      <dt className="text-xs text-texto-3">{rotulo}</dt>
-      <dd className="text-2xl font-semibold tabular-nums">{valor}</dd>
+    <div className="border-2 border-texto bg-superficie px-4 py-3.5 transition-[translate,box-shadow] duration-200 hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-[5px_5px_0_#c6f432]">
+      <dt className="font-mono text-[11px] font-extrabold tracking-[1.5px] text-texto-2">{rotulo}</dt>
+      <dd className="mt-1 text-[38px] leading-[1.1] font-black tracking-[-1px] tabular-nums">{valor}</dd>
     </div>
   )
 }

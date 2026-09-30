@@ -53,9 +53,9 @@ export function MatrizIntervalo({ transicoes }: { transicoes: TransicaoIntervalo
               return (
                 <td key={final} className="p-1">
                   <div
-                    className={`rounded-md py-2 ${intensidade > 40 ? 'font-semibold text-white' : 'text-texto'}`}
+                    className={`py-2 ${intensidade > 40 ? 'font-semibold text-white' : 'text-texto'}`}
                     style={{
-                      background: `color-mix(in oklab, var(--serie) ${intensidade}%, var(--superficie-2))`,
+                      background: `color-mix(in oklab, #2f6bff ${intensidade}%, var(--superficie-2))`,
                     }}
                   >
                     {quantidade}

@@ -15,16 +15,18 @@ type Props = {
   series: SerieTime[]
   medida: Medida
   quantidadeTimes: number
+  /** 0 a 1: as linhas se desenham rodada a rodada junto com a animação da página. */
+  progresso?: number
 }
 
-const ALTURA = 300
-const MARGEM = { topo: 16, direita: 48, base: 28, esquerda: 36 }
+const ALTURA = 320
+const MARGEM = { topo: 14, direita: 50, base: 30, esquerda: 44 }
 /** Rótulos no fim das linhas só enquanto não se atropelam; senão ficam a legenda e a dica. */
 const DISTANCIA_MINIMA_ROTULOS = 14
 const MAXIMO_ROTULOS_DIRETOS = 4
 
 /** Várias linhas na mesma escala: posição (1º no topo) ou pontos, rodada a rodada. */
-export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
+export function GraficoComparativo({ series, medida, quantidadeTimes, progresso = 1 }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(0)
   const [rodadaAtiva, setRodadaAtiva] = useState<number | null>(null)
@@ -62,13 +64,18 @@ export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
   const passo = ultimaRodada > 20 ? 5 : ultimaRodada > 10 ? 2 : 1
   const rodadasEixo = Array.from({ length: ultimaRodada }, (_, i) => i + 1).filter((r) => r === 1 || r % passo === 0)
 
+  // Durante a animação, cada linha vai até a rodada `limite`.
+  const limite = Math.max(1, Math.ceil(progresso * ultimaRodada))
+  const visiveis = series.map((s) => ({ ...s, pontos: s.pontos.filter((p) => p.rodada <= limite) }))
+
   // Fim de cada linha, para o ponto final e o rótulo direto.
-  const finais = series
+  const finais = visiveis
     .map((s) => ({ serie: s, ultimo: s.pontos[s.pontos.length - 1] }))
     .filter((f) => f.ultimo)
     .map((f) => ({ ...f, yFinal: y(valor(f.ultimo)) }))
   const ordenadosY = [...finais].sort((a, b) => a.yFinal - b.yFinal)
   const rotulosCabem =
+    progresso >= 1 &&
     finais.length <= MAXIMO_ROTULOS_DIRETOS &&
     ordenadosY.every((f, i) => i === 0 || f.yFinal - ordenadosY[i - 1].yFinal >= DISTANCIA_MINIMA_ROTULOS)
 
@@ -105,14 +112,14 @@ export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
           {grade.map((v) => (
             <g key={v}>
               <line x1={MARGEM.esquerda} x2={largura - MARGEM.direita} y1={y(v)} y2={y(v)} className="stroke-borda" strokeWidth={1} />
-              <text x={MARGEM.esquerda - 8} y={y(v)} dy="0.32em" textAnchor="end" className="fill-texto-3 text-[11px] tabular-nums">
+              <text x={MARGEM.esquerda - 8} y={y(v)} dy="0.32em" textAnchor="end" className="fill-texto-3 font-mono text-xs">
                 {rotuloGrade(v)}
               </text>
             </g>
           ))}
 
           {rodadasEixo.map((rodada) => (
-            <text key={rodada} x={x(rodada)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 text-[11px] tabular-nums">
+            <text key={rodada} x={x(rodada)} y={ALTURA - 8} textAnchor="middle" className="fill-texto-3 font-mono text-xs">
               {rodada}
             </text>
           ))}
@@ -128,13 +135,13 @@ export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
             />
           )}
 
-          {series.map((s) => (
+          {visiveis.map((s) => (
             <path
               key={s.time.id}
               d={s.pontos.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.rodada)},${y(valor(p))}`).join(' ')}
               fill="none"
               className={COR_LINHA[s.vaga]}
-              strokeWidth={2}
+              strokeWidth={3}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
@@ -145,7 +152,7 @@ export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
               key={serie.time.id}
               cx={x(ponto.rodada)}
               cy={y(valor(ponto))}
-              r={4}
+              r={5}
               className={`${COR_PONTO[serie.vaga]} stroke-superficie`}
               strokeWidth={2}
             />
@@ -156,10 +163,10 @@ export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
             finais.map((f) => (
               <text
                 key={f.serie.time.id}
-                x={x(f.ultimo.rodada) + 9}
+                x={x(f.ultimo.rodada) + 10}
                 y={f.yFinal}
                 dy="0.32em"
-                className="fill-texto text-[11px] font-semibold"
+                className={`${COR_PONTO[f.serie.vaga]} font-mono text-xs font-extrabold`}
               >
                 {f.serie.time.sigla}
               </text>
@@ -179,16 +186,16 @@ export function GraficoComparativo({ series, medida, quantidadeTimes }: Props) {
 
       {!vazio && rodadaAtiva !== null && naRodada.length > 0 && (
         <div
-          className="pointer-events-none absolute top-2 rounded-md border border-borda bg-superficie px-2.5 py-1.5 text-xs shadow-md"
+          className="pointer-events-none absolute top-2 border-2 border-texto bg-superficie px-2.5 py-1.5 text-xs shadow-[4px_4px_0_#c6f432]"
           style={{ left: dicaX + 8, width: larguraDica }}
         >
-          <div className="mb-1 text-texto-3">Rodada {rodadaAtiva}</div>
+          <div className="mb-1 font-mono font-extrabold text-texto-2">RODADA {rodadaAtiva}</div>
           <ul className="space-y-0.5">
             {naRodada.map(({ serie, ponto }) => (
               <li key={serie.time.id} className="flex items-center gap-1.5 text-texto">
                 <span className={`inline-block size-2 shrink-0 rounded-full ${COR_FUNDO[serie.vaga]}`} />
                 <span className="truncate">{serie.time.nomeCurto}</span>
-                <span className="ml-auto font-semibold tabular-nums">
+                <span className="ml-auto font-black tabular-nums">
                   {medida === 'posicao' ? `${ponto.posicao}º` : `${ponto.pontos} pts`}
                 </span>
               </li>

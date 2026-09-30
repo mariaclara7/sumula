@@ -1,50 +1,63 @@
 @import 'tailwindcss';
 
 /*
- * Cores do site. Os componentes usam só estes nomes (bg-superficie, text-texto-2...),
+ * Cores do site ("Modo Carreira"). Os componentes usam só estes nomes (bg-superficie, text-texto-2...),
  * então o modo escuro troca tudo em um lugar.
+ *
+ * O tema segue o sistema, a não ser que a pessoa escolha no botão Escuro/Claro:
+ * aí o <html> ganha data-tema="claro" ou data-tema="escuro" (veja index.html e Preferencias.tsx).
  */
 :root {
   color-scheme: light;
-  --fundo: #f6f6f4;
-  --superficie: #fcfcfb;
-  --superficie-2: #f0efeb;
-  --borda: #e4e3de;
-  --texto: #0b0b0b;
-  --texto-2: #52514e;
-  --texto-3: #6b6a65;
-  --destaque: #0d7a45;
-  --serie: #2a78d6;
-  --serie-2: #eb6834;
-  --serie-3: #1baf7a;
-  --serie-4: #eda100;
-  --serie-5: #e87ba4;
-  --zona-libertadores: #2a78d6;
-  --zona-sul-americana: #1baf7a;
+  --fundo: #f2f1ec;
+  --superficie: #ffffff;
+  --superficie-2: #e4e2da;
+  --borda: #d9d7cf;
+  --texto: #111111;
+  --texto-2: #6b6960;
+  --texto-3: #6b6960;
+  /* Texto do botão ativo nos controles segmentados, que têm fundo na cor do texto. */
+  --texto-invertido: #c6f432;
+  /* Fundo da linha do "meu time" nas tabelas. */
+  --realce: rgb(198 244 50 / 0.3);
+  /* Barra de destaque: grafite no claro, lima no escuro. */
+  --forte: #111111;
+}
+
+:root[data-tema='escuro'] {
+  color-scheme: dark;
+  --fundo: #161615;
+  --superficie: #201f1d;
+  --superficie-2: #2e2d2a;
+  --borda: #2e2d2a;
+  --texto: #f2f1ec;
+  --texto-2: #a8a69e;
+  --texto-3: #a8a69e;
+  --texto-invertido: #111111;
+  --realce: rgb(198 244 50 / 0.14);
+  --forte: #c6f432;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-tema='claro']) {
     color-scheme: dark;
-    --fundo: #111110;
-    --superficie: #1a1a19;
-    --superficie-2: #242422;
-    --borda: #33332f;
-    --texto: #ffffff;
-    --texto-2: #c3c2b7;
-    --texto-3: #9a998f;
-    --destaque: #3fb877;
-    --serie: #3987e5;
-    --serie-2: #d95926;
-    --serie-3: #199e70;
-    --serie-4: #c98500;
-    --serie-5: #d55181;
-    --zona-libertadores: #3987e5;
-    --zona-sul-americana: #199e70;
+    --fundo: #161615;
+    --superficie: #201f1d;
+    --superficie-2: #2e2d2a;
+    --borda: #2e2d2a;
+    --texto: #f2f1ec;
+    --texto-2: #a8a69e;
+    --texto-3: #a8a69e;
+    --texto-invertido: #111111;
+    --realce: rgb(198 244 50 / 0.14);
+    --forte: #c6f432;
   }
 }
 
 @theme inline {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
   --color-fundo: var(--fundo);
   --color-superficie: var(--superficie);
   --color-superficie-2: var(--superficie-2);
@@ -52,25 +65,96 @@
   --color-texto: var(--texto);
   --color-texto-2: var(--texto-2);
   --color-texto-3: var(--texto-3);
-  --color-destaque: var(--destaque);
-  --color-serie: var(--serie);
-  --color-serie-2: var(--serie-2);
-  --color-serie-3: var(--serie-3);
-  --color-serie-4: var(--serie-4);
-  --color-serie-5: var(--serie-5);
-  --color-zona-libertadores: var(--zona-libertadores);
-  /* Mesma competição da Libertadores: mesmo azul, mais claro. */
-  --color-zona-pre-libertadores: color-mix(in oklab, var(--zona-libertadores) 45%, var(--superficie));
-  --color-zona-sul-americana: var(--zona-sul-americana);
-  --color-zona-rebaixamento: #d03b3b;
-  --color-vitoria: #0ca30c;
-  --color-empate: #8a8983;
-  --color-derrota: #d03b3b;
+  --color-texto-invertido: var(--texto-invertido);
+  --color-realce: var(--realce);
+  --color-forte: var(--forte);
+
+  /* Cores fixas, iguais nos dois temas. */
+  --color-lima: #c6f432;
+  --color-grafite: #111111;
+  --color-creme: #f2f1ec;
+  --color-cinza: #a8a69e;
+  --color-linha-escura: #3a3a37;
+  --color-prata: #cfcdc5;
+  --color-bronze: #e0b48a;
+  --color-azul: #2f6bff;
+  --color-azul-claro: #8aa6ff;
+  --color-verde: #1f9d55;
+  --color-vermelho: #e5484d;
+  --color-laranja: #e9a23b;
+  --color-destaque: #1f9d55;
+
+  /* Séries dos gráficos com vários times, na ordem das vagas. A 1ª usa a cor do texto. */
+  --color-serie: var(--texto);
+  --color-serie-2: #2f6bff;
+  --color-serie-3: #e5484d;
+  --color-serie-4: #1f9d55;
+  --color-serie-5: #e9a23b;
+
+  --color-zona-libertadores: #2f6bff;
+  --color-zona-pre-libertadores: #8aa6ff;
+  --color-zona-sul-americana: #1f9d55;
+  --color-zona-rebaixamento: #e5484d;
+
+  --animate-entrada: entrada 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Cantos cortados dos cards escuros. */
+@utility corte-duplo {
+  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 28px 100%, 0 calc(100% - 28px));
+}
+@utility corte-duplo-p {
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+}
+@utility corte-canto {
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+/* Paralelogramo das abas do menu e das notas OVR. */
+@utility inclinado {
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+@utility inclinado-p {
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+/* Sombra "dura" dos botões e cards clicáveis. */
+@utility sombra-dura {
+  box-shadow: 4px 4px 0 var(--sombra, var(--texto));
+}
+
+@keyframes entrada {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes confete {
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx), 460px, 0) rotate(720deg);
+    opacity: 0;
+  }
 }
 
 body {
   background: var(--fundo);
   color: var(--texto);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

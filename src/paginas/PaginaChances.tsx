@@ -1,110 +1,158 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useProbabilidades } from '../api/consultas'
+import type { ProbabilidadesTime } from '../api/tipos'
 import { BarraChance } from '../componentes/BarraChance'
-import { Cartao } from '../componentes/Cartao'
+import { CartaoDestaque } from '../componentes/CartaoDestaque'
 import { Escudo } from '../componentes/Escudo'
-import { Carregando, Erro, Vazio } from '../componentes/Estado'
-import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
+import { BotaoPrincipal, Carregando, Erro, Vazio } from '../componentes/Estado'
+import { Pagina } from '../componentes/Pagina'
+import { TituloPagina } from '../componentes/TituloPagina'
+import { FAIXAS_CHANCES, chanceNaFaixa, type Zona } from '../config'
+import { usePreferencias } from '../preferencias'
+import { contar, useAnimacao } from '../util/animacao'
 
-// No celular ficam só título, Libertadores e rebaixamento.
-const VISIBILIDADE: Record<string, string> = {
-  'Pré-Libertadores': 'hidden md:table-cell',
-  'Sul-Americana': 'hidden sm:table-cell',
+// Nomes curtos das colunas, como no cabeçalho do design.
+const ROTULO: Record<string, string> = {
+  Título: 'TÍTULO',
+  Libertadores: 'LIBERTA',
+  'Pré-Libertadores': 'PRÉ-LIB.',
+  'Sul-Americana': 'SUL-AM.',
+  Rebaixamento: 'REBAIX.',
 }
 
-// Rótulos curtos para caber no celular; o nome completo aparece ao passar o mouse.
-const ROTULO_CURTO: Record<string, string> = {
-  Libertadores: 'Lib.',
-  Rebaixamento: 'Queda',
-}
+// No gráfico da faixa do título a barra usa a cor do texto, como no design.
+const COR_BARRA: Record<string, string> = { Título: 'bg-texto' }
 
-const cabecalho = 'px-1.5 py-2 text-xs font-medium text-texto-3 sm:px-2'
+const COLUNAS = 'grid grid-cols-[52px_minmax(160px,1fr)_52px_92px_repeat(5,110px)]'
+const faixa = (nome: string) => FAIXAS_CHANCES.find((f) => f.nome === nome)!
 
 export function PaginaChances() {
   const { data, isPending, isError, refetch } = useProbabilidades()
+  const { progresso, repetir } = useAnimacao(data !== undefined)
+  const { meuTime } = usePreferencias()
+  const navegar = useNavigate()
 
   const conteudo = () => {
     if (isPending) return <Carregando />
     if (isError) return <Erro tentarDeNovo={() => refetch()} />
     if (data.times.length === 0) return <Vazio>Ainda não há dados desta temporada.</Vazio>
 
+    const chance = (t: ProbabilidadesTime, zona: Zona) => chanceNaFaixa(t.posicoes, zona)
+    const maior = (lista: ProbabilidadesTime[], zona: Zona) =>
+      [...lista].sort((a, b) => chance(b, zona) - chance(a, zona))[0]
+
+    const titulo = faixa('Título')
+    const libertadores = faixa('Libertadores')
+    const rebaixamento = faixa('Rebaixamento')
+    const favorito = maior(data.times, titulo)
+    // "Mais perto": entre quem ainda não tem a vaga praticamente garantida (e sem repetir o favorito).
+    const pertoDaLiberta = maior(
+      data.times.filter((t) => t !== favorito && chance(t, libertadores) < 0.99),
+      libertadores,
+    )
+    const ameacado = maior(data.times, rebaixamento)
+    const porcentagem = (t: ProbabilidadesTime | undefined, zona: Zona) =>
+      t ? `${contar(chance(t, zona) * 100, progresso)}%` : '—'
+
+    const ordenados = [...data.times].sort((a, b) => b.pontosEsperados - a.pontosEsperados)
+
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-borda">
-            <tr>
-              <th scope="col" className={`${cabecalho} hidden w-8 text-center sm:table-cell`}>
-                <abbr title="Posição atual" className="no-underline">
-                  Pos.
-                </abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} text-left`}>
-                Time
-              </th>
-              <th scope="col" className={`${cabecalho} text-right`}>
-                <abbr title="Pontos atuais" className="no-underline">
-                  Pts
-                </abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden text-right md:table-cell`}>
-                Pts esperados
-              </th>
-              {FAIXAS_CHANCES.map((faixa) => (
-                <th key={faixa.nome} scope="col" className={`${cabecalho} text-right ${VISIBILIDADE[faixa.nome] ?? ''}`}>
-                  {ROTULO_CURTO[faixa.nome] ? (
-                    <>
-                      <abbr title={faixa.nome} className="no-underline sm:hidden">
-                        {ROTULO_CURTO[faixa.nome]}
-                      </abbr>
-                      <span className="hidden sm:inline">{faixa.nome}</span>
-                    </>
-                  ) : (
-                    faixa.nome
-                  )}
-                </th>
+      <>
+        <div className="mt-7 grid gap-3.5 md:grid-cols-3">
+          <CartaoDestaque escuro rotulo="FAVORITO AO TÍTULO" nome={favorito.time.nomeCurto} valor={porcentagem(favorito, titulo)} />
+          <CartaoDestaque
+            rotulo="MAIS PERTO DA LIBERTA"
+            corRotulo="text-azul"
+            nome={pertoDaLiberta?.time.nomeCurto ?? '—'}
+            valor={porcentagem(pertoDaLiberta, libertadores)}
+          />
+          <CartaoDestaque
+            rotulo="MAIS AMEAÇADO"
+            corRotulo="text-vermelho"
+            corValor="text-vermelho"
+            nome={ameacado.time.nomeCurto}
+            valor={porcentagem(ameacado, rebaixamento)}
+          />
+        </div>
+
+        <div className="mt-7 overflow-x-auto">
+          <div role="table" aria-label="Chances de cada time" className="min-w-[940px]">
+            <div
+              role="row"
+              className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}
+            >
+              <span role="columnheader">
+                <abbr title="Posição atual" className="no-underline">POS</abbr>
+              </span>
+              <span role="columnheader" className="text-left">TIME</span>
+              <span role="columnheader">
+                <abbr title="Pontos atuais" className="no-underline">PTS</abbr>
+              </span>
+              <span role="columnheader">
+                <abbr title="Pontos esperados ao fim do campeonato" className="no-underline">PTS ESP.</abbr>
+              </span>
+              {FAIXAS_CHANCES.map((f) => (
+                <span key={f.nome} role="columnheader">
+                  <abbr title={f.nome} className="no-underline">{ROTULO[f.nome] ?? f.nome}</abbr>
+                </span>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-borda">
-            {data.times.map((linha) => (
-              <tr key={linha.time.id} className="hover:bg-superficie-2">
-                <td className="hidden px-2 py-2 text-center tabular-nums text-texto-2 sm:table-cell">{linha.posicaoAtual}</td>
-                <td className="px-1.5 py-2 sm:px-2">
-                  <Link to={`/times/${linha.time.id}`} className="flex items-center gap-2 font-medium hover:underline">
-                    <Escudo time={linha.time} />
-                    <span className="max-w-[5.5rem] truncate sm:max-w-none">{linha.time.nomeCurto}</span>
+            </div>
+            {ordenados.map((linha) => (
+              <div
+                key={linha.time.id}
+                role="row"
+                onClick={() => navegar(`/times/${linha.time.id}`)}
+                className={`${COLUNAS} h-[54px] cursor-pointer items-center border-b border-borda text-center transition-[translate] duration-200 hover:translate-x-1.5 ${
+                  meuTime === linha.time.id ? 'bg-realce' : ''
+                }`}
+              >
+                <span role="cell" className="text-lg font-black">{linha.posicaoAtual}</span>
+                <div role="cell" className="flex min-w-0 items-center gap-2.5 text-left">
+                  <Escudo time={linha.time} tamanho={28} />
+                  <Link
+                    to={`/times/${linha.time.id}`}
+                    onClick={(evento) => evento.stopPropagation()}
+                    className="truncate text-[15px] font-bold hover:text-destaque"
+                  >
+                    {linha.time.nomeCurto}
                   </Link>
-                </td>
-                <td className="px-1.5 py-2 text-right font-bold tabular-nums sm:px-2">{linha.pontosAtuais}</td>
-                <td className="hidden px-2 py-2 text-right tabular-nums text-texto-2 md:table-cell">
-                  {Math.round(linha.pontosEsperados)}
-                </td>
-                {FAIXAS_CHANCES.map((faixa) => (
-                  <td key={faixa.nome} className={`px-1.5 py-2 sm:px-2 ${VISIBILIDADE[faixa.nome] ?? ''}`}>
-                    <BarraChance chance={chanceNaFaixa(linha.posicoes, faixa)} cor={faixa.cor} />
-                  </td>
+                </div>
+                <span role="cell" className="text-lg font-black tabular-nums">{linha.pontosAtuais}</span>
+                <span role="cell" className="font-mono text-sm font-medium text-texto-2 tabular-nums">
+                  {contar(linha.pontosEsperados, progresso)}
+                </span>
+                {FAIXAS_CHANCES.map((f) => (
+                  <div key={f.nome} role="cell" className="px-2.5">
+                    <BarraChance chance={chance(linha, f)} cor={COR_BARRA[f.nome] ?? f.cor} progresso={progresso} />
+                  </div>
                 ))}
-              </tr>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Chances</h1>
-        <p className="mt-1 max-w-2xl text-sm text-texto-2">
-          {data && data.partidasRestantes > 0
-            ? `Simulamos os ${data.partidasRestantes} jogos que faltam ${data.simulacoes.toLocaleString('pt-BR')} vezes. `
-            : 'Simulamos os jogos que faltam milhares de vezes. '}
-          O placar de cada jogo é sorteado a partir dos gols marcados e sofridos por cada time na temporada, com
-          vantagem para o mandante. A chance é a fração das simulações em que o time termina na faixa.
-        </p>
-      </div>
-      <Cartao>{conteudo()}</Cartao>
-    </div>
+    <Pagina className="pt-9 pb-12">
+      <TituloPagina>Chances</TituloPagina>
+      <p className="mt-[18px] max-w-[720px] text-[15px] leading-[1.55] text-pretty text-texto-2">
+        {data && data.partidasRestantes > 0
+          ? `Simulamos os ${data.partidasRestantes} jogos que faltam ${data.simulacoes.toLocaleString('pt-BR')} vezes. `
+          : 'Simulamos os jogos que faltam milhares de vezes. '}
+        O placar de cada jogo é sorteado a partir dos gols marcados e sofridos por cada time na temporada, com vantagem
+        para o mandante. A chance é a fração das simulações em que o time termina na faixa.
+      </p>
+      {data && (
+        <div className="mt-5 flex flex-wrap items-center gap-3.5">
+          <BotaoPrincipal onClick={repetir}>Ver a simulação de novo</BotaoPrincipal>
+          <span className="font-mono text-sm font-bold tabular-nums">
+            {contar(data.simulacoes, progresso).toLocaleString('pt-BR')} simulações
+          </span>
+        </div>
+      )}
+      {conteudo()}
+    </Pagina>
   )
 }

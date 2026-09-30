@@ -1,104 +1,185 @@
-import { Link } from 'react-router'
+import { useLayoutEffect, useRef } from 'react'
+import { Link, useNavigate } from 'react-router'
 import type { LinhaClassificacao } from '../api/tipos'
 import { zonaDaPosicao } from '../config'
+import { contar } from '../util/animacao'
 import { formatarPercentual, formatarSaldo } from '../util/formato'
+import { faixaDaNota, notaDoTime } from '../util/notas'
 import { Escudo } from './Escudo'
 import { FormaRecente } from './FormaRecente'
 import { LegendaZonas } from './LegendaZonas'
 
 type Props = {
   linhas: LinhaClassificacao[]
-  /** As faixas de Libertadores/rebaixamento só fazem sentido na tabela geral. */
+  /** As faixas de Libertadores/rebaixamento só fazem sentido na tabela com todos os jogos. */
   mostrarZonas: boolean
+  /** Posição de cada time na tabela normal, para mostrar ▲▼ quando um filtro muda a ordem. */
+  posicaoNormal?: Map<number, number>
+  /** Linha destacada ("meu time"). */
+  destaque?: number | null
+  /** 0 a 1: números contam e barras crescem junto com a animação da página. */
+  progresso?: number
 }
 
-const cabecalho = 'px-1.5 sm:px-2 py-2 text-center text-xs font-medium text-texto-3'
-const celula = 'px-1.5 sm:px-2 py-2 text-center tabular-nums'
+// No celular ficam só posição, time, pontos e forma; o resto aparece a partir do tablet.
+const COLUNAS =
+  'grid grid-cols-[40px_minmax(0,1fr)_40px_104px] md:grid-cols-[64px_minmax(0,1fr)_64px_60px_44px_110px_56px_170px_150px]'
+const SO_TABLET = 'hidden md:flex'
 
-export function TabelaClassificacao({ linhas, mostrarZonas }: Props) {
+export function TabelaClassificacao({ linhas, mostrarZonas, posicaoNormal, destaque, progresso = 1 }: Props) {
+  const navegar = useNavigate()
+  const corpo = useRef<HTMLDivElement>(null)
+  useDeslizar(corpo, linhas.map((l) => l.time.id).join())
+
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-borda [&_abbr]:no-underline">
-            <tr>
-              <th scope="col" className={`${cabecalho} w-10`}>
-                <abbr title="Posição">#</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} text-left`}>
-                Time
-              </th>
-              <th scope="col" className={cabecalho}>
-                <abbr title="Pontos">P</abbr>
-              </th>
-              <th scope="col" className={cabecalho}>
-                <abbr title="Jogos">J</abbr>
-              </th>
-              <th scope="col" className={cabecalho}>
-                <abbr title="Vitórias">V</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden sm:table-cell`}>
-                <abbr title="Empates">E</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden sm:table-cell`}>
-                <abbr title="Derrotas">D</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden md:table-cell`}>
-                <abbr title="Gols pró">GP</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden md:table-cell`}>
-                <abbr title="Gols contra">GC</abbr>
-              </th>
-              <th scope="col" className={cabecalho}>
-                <abbr title="Saldo de gols">SG</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden md:table-cell`}>
-                <abbr title="Aproveitamento">%</abbr>
-              </th>
-              <th scope="col" className={`${cabecalho} hidden lg:table-cell`}>
-                Últimos 5
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-borda">
+        <div role="table" aria-label="Classificação" className="md:min-w-[980px]">
+          <div
+            role="row"
+            className={`${COLUNAS} h-8 items-center border-b-2 border-texto text-center font-mono text-[10px] font-extrabold tracking-[1px] text-texto-2 md:h-9 md:text-[11px]`}
+          >
+            <span role="columnheader" className="pl-2.5 text-left md:pl-0 md:text-center">
+              <abbr title="Posição" className="no-underline">#</abbr>
+            </span>
+            <span role="columnheader" className="text-left">TIME</span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Nota geral, a partir do aproveitamento" className="no-underline">OVR</abbr>
+            </span>
+            <span role="columnheader">
+              <abbr title="Pontos" className="no-underline">PTS</abbr>
+            </span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Jogos" className="no-underline">J</abbr>
+            </span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Vitórias, empates e derrotas" className="no-underline">V · E · D</abbr>
+            </span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Saldo de gols" className="no-underline">SG</abbr>
+            </span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Aproveitamento" className="no-underline">APROV.</abbr>
+            </span>
+            <span role="columnheader">FORMA</span>
+          </div>
+
+          <div ref={corpo} role="rowgroup">
             {linhas.map((linha) => {
               const zona = mostrarZonas ? zonaDaPosicao(linha.posicao) : undefined
+              const nota = notaDoTime(linha.aproveitamento)
+              const normal = posicaoNormal?.get(linha.time.id)
+              const variacao = normal === undefined ? 0 : normal - linha.posicao
+
               return (
-                <tr key={linha.time.id} className="hover:bg-superficie-2">
-                  <td className="relative px-2 py-2 text-center font-medium tabular-nums">
-                    {zona && (
-                      <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${zona.cor}`} title={zona.nome} />
-                    )}
-                    {linha.posicao}
-                  </td>
-                  <td className="px-2 py-2">
-                    <Link to={`/times/${linha.time.id}`} className="flex items-center gap-2 font-medium hover:underline">
-                      <Escudo time={linha.time} />
-                      <span className="max-w-[7.5rem] truncate sm:max-w-none">{linha.time.nomeCurto}</span>
+                <div
+                  key={linha.time.id}
+                  role="row"
+                  data-deslizar={linha.time.id}
+                  onClick={() => navegar(`/times/${linha.time.id}`)}
+                  className={`${COLUNAS} h-14 cursor-pointer items-center border-b border-borda text-center transition-[translate] duration-200 md:hover:translate-x-1.5 ${
+                    destaque === linha.time.id ? 'bg-realce' : ''
+                  }`}
+                >
+                  <div role="cell" className="flex h-full items-center gap-2 md:gap-3">
+                    <span
+                      title={zona?.nome}
+                      className={`h-full w-1 md:w-1.5 ${zona?.cor ?? 'bg-transparent'}`}
+                    />
+                    <span className="text-[17px] font-black md:text-[22px] md:tracking-[-1px]">{linha.posicao}</span>
+                  </div>
+                  <div role="cell" className="flex min-w-0 items-center gap-2 text-left md:gap-3">
+                    <Escudo time={linha.time} tamanho={28} />
+                    <Link
+                      to={`/times/${linha.time.id}`}
+                      onClick={(evento) => evento.stopPropagation()}
+                      className="truncate text-sm font-bold hover:text-destaque md:text-base"
+                    >
+                      {linha.time.nomeCurto}
                     </Link>
-                  </td>
-                  <td className={`${celula} font-bold`}>{linha.pontos}</td>
-                  <td className={celula}>{linha.jogos}</td>
-                  <td className={celula}>{linha.vitorias}</td>
-                  <td className={`${celula} hidden sm:table-cell`}>{linha.empates}</td>
-                  <td className={`${celula} hidden sm:table-cell`}>{linha.derrotas}</td>
-                  <td className={`${celula} hidden md:table-cell`}>{linha.golsPro}</td>
-                  <td className={`${celula} hidden md:table-cell`}>{linha.golsContra}</td>
-                  <td className={celula}>{formatarSaldo(linha.saldo)}</td>
-                  <td className={`${celula} hidden md:table-cell`}>{formatarPercentual(linha.aproveitamento)}</td>
-                  <td className="hidden px-2 py-2 lg:table-cell">
-                    <div className="flex justify-center">
-                      <FormaRecente resultados={linha.ultimosResultados} />
+                    {variacao !== 0 && (
+                      <span
+                        title={`${variacao > 0 ? 'Sobe' : 'Cai'} ${Math.abs(variacao)} em relação à tabela normal`}
+                        className={`font-mono text-[11px] font-extrabold whitespace-nowrap md:text-xs ${variacao > 0 ? 'text-verde' : 'text-vermelho'}`}
+                      >
+                        {variacao > 0 ? `▲${variacao}` : `▼${-variacao}`}
+                      </span>
+                    )}
+                  </div>
+                  <div role="cell" className={`${SO_TABLET} justify-center`}>
+                    <span
+                      title={`Faixa ${faixaDaNota(nota).nome.toLowerCase()}`}
+                      className={`inclinado-p grid h-[26px] w-10 place-items-center text-sm font-black text-grafite ${faixaDaNota(nota).cor}`}
+                    >
+                      {contar(nota, progresso)}
+                    </span>
+                  </div>
+                  <span role="cell" className="text-lg font-black tabular-nums md:text-[22px]">
+                    {contar(linha.pontos, progresso)}
+                  </span>
+                  <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium text-texto-2`}>
+                    {linha.jogos}
+                  </span>
+                  <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium`}>
+                    {`${linha.vitorias} · ${linha.empates} · ${linha.derrotas}`}
+                  </span>
+                  <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium`}>
+                    {formatarSaldo(linha.saldo)}
+                  </span>
+                  <div role="cell" className={`${SO_TABLET} items-center gap-2.5 px-2`}>
+                    <div className="h-2 flex-1 bg-superficie-2">
+                      <div className="h-full bg-texto" style={{ width: `${linha.aproveitamento * progresso}%` }} />
                     </div>
-                  </td>
-                </tr>
+                    <span className="w-11 text-right font-mono text-xs font-medium text-texto-2">
+                      {formatarPercentual(linha.aproveitamento)}
+                    </span>
+                  </div>
+                  <div role="cell" className="flex justify-center">
+                    <span className="md:hidden">
+                      <FormaRecente resultados={linha.ultimosResultados} tamanho="p" />
+                    </span>
+                    <span className="hidden md:block">
+                      <FormaRecente resultados={linha.ultimosResultados} />
+                    </span>
+                  </div>
+                </div>
               )
             })}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
 
       {mostrarZonas && <LegendaZonas />}
     </div>
   )
+}
+
+/**
+ * Quando a ordem das linhas muda, cada uma desliza da posição antiga para a nova (técnica FLIP).
+ * As linhas continuam na ordem certa no HTML; só o movimento é animado.
+ */
+function useDeslizar(container: React.RefObject<HTMLElement | null>, ordem: string) {
+  const posicoes = useRef(new Map<string, number>())
+
+  useLayoutEffect(() => {
+    const elemento = container.current
+    if (!elemento) return
+    const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const novas = new Map<string, number>()
+
+    elemento.querySelectorAll<HTMLElement>('[data-deslizar]').forEach((linha) => {
+      const id = linha.dataset.deslizar!
+      const topo = linha.offsetTop
+      const antes = posicoes.current.get(id)
+      novas.set(id, topo)
+      if (antes !== undefined && antes !== topo && !reduzido && linha.animate) {
+        linha.animate([{ transform: `translateY(${antes - topo}px)` }, { transform: 'translateY(0)' }], {
+          duration: 800,
+          easing: 'cubic-bezier(.7,0,.2,1)',
+        })
+      }
+    })
+
+    posicoes.current = novas
+  }, [container, ordem])
 }

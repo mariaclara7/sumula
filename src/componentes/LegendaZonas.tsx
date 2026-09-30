@@ -1,11 +1,11 @@
 import { ZONAS } from '../config'
 
-export function LegendaZonas() {
+export function LegendaZonas({ className = 'mt-[18px]' }: { className?: string }) {
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1 border-t border-borda px-4 py-3 text-xs text-texto-2">
+    <ul className={`flex flex-wrap gap-x-[22px] gap-y-2.5 text-[13px] font-semibold text-texto-2 ${className}`}>
       {ZONAS.map((zona) => (
-        <li key={zona.nome} className="flex items-center gap-1.5">
-          <span className={`inline-block h-3 w-1 rounded ${zona.cor}`} />
+        <li key={zona.nome} className="flex items-center gap-2">
+          <span className={`inline-block size-2.5 ${zona.cor}`} />
           {zona.nome}
         </li>
       ))}
