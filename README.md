@@ -67,14 +67,13 @@ visitas para arquivos estáticos):
 | `sumula-dados` | a "API pré-calculada": um `.json` para cada endereço que o site usa | workflow **Coletor** da [api-sumula](https://github.com/mariaclara7/api-sumula), a cada 3 horas |
 
 Em produção o site é gerado com `VITE_API_ESTATICA=true`: em vez de chamar a API ao vivo, lê os arquivos
-(`src/api/rotas.ts` monta o nome de cada um). O banco (Neon) só é usado pela coleta.
+(`src/api/rotas.ts` monta o nome de cada um). Não há banco em produção: a coleta usa um Postgres descartável
+que só existe durante o workflow.
 
 ### Passo a passo
 
-**1. Contas (grátis)**
+**1. Conta na Cloudflare (grátis)**
 
-- **Neon** ([neon.tech](https://neon.tech)): crie um projeto `sumula` (região mais perto do Brasil que houver) e
-  copie a *connection string* (`postgresql://...`).
 - **Cloudflare** ([dash.cloudflare.com](https://dash.cloudflare.com)): crie a conta e abra uma vez
   *Workers & Pages*, para a Cloudflare criar o seu endereço `*.workers.dev`. Depois:
   - copie o **Account ID** (aparece na lateral de *Workers & Pages*);
@@ -83,7 +82,7 @@ Em produção o site é gerado com `VITE_API_ESTATICA=true`: em vez de chamar a 
 
 **2. Secrets no GitHub** (*Settings → Secrets and variables → Actions → New repository secret*)
 
-- `api-sumula`: `FOOTBALL_DATA_TOKEN`, `DATABASE_URL` (a do Neon), `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- `api-sumula`: `FOOTBALL_DATA_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 - `sumula` (este): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 
 **3. Primeira publicação**
