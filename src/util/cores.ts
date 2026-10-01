@@ -18,6 +18,7 @@ const CORES: Record<string, CoresTime> = {
   cruzeiro: { principal: '#1b3fa6', secundaria: '#ffffff' },
   mineiro: { principal: '#1a1a1a', secundaria: '#ffffff' },
   'atletico mineiro': { principal: '#1a1a1a', secundaria: '#ffffff' },
+  'atletico-mg': { principal: '#1a1a1a', secundaria: '#ffffff' },
   santos: { principal: '#f4f4f4', secundaria: '#111111' },
   coritiba: { principal: '#0f6b3c', secundaria: '#ffffff' },
   bragantino: { principal: '#e8e8e8', secundaria: '#c8102e' },

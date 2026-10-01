@@ -7,6 +7,7 @@ describe('coresDoTime', () => {
     expect(coresDoTime({ nomeCurto: 'GRÊMIO', nome: '' }).principal).toBe('#0a7fc2')
     expect(coresDoTime({ nomeCurto: 'Athletico-PR', nome: 'CA Paranaense' }).principal).toBe('#d2102a')
     expect(coresDoTime({ nomeCurto: 'Remo', nome: 'Clube do Remo' }).principal).toBe('#0d2a6b')
+    expect(coresDoTime({ nomeCurto: 'Atlético-MG', nome: 'CA Mineiro' }).principal).toBe('#1a1a1a')
   })
 
   it('usa o nome completo e depois cores neutras', () => {
