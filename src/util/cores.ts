@@ -12,6 +12,7 @@ const CORES: Record<string, CoresTime> = {
   palmeiras: { principal: '#0b6b3a', secundaria: '#ffffff' },
   paranaense: { principal: '#d2102a', secundaria: '#111111' },
   athletico: { principal: '#d2102a', secundaria: '#111111' },
+  'athletico-pr': { principal: '#d2102a', secundaria: '#111111' },
   fluminense: { principal: '#7a1f3d', secundaria: '#ffffff' },
   bahia: { principal: '#1a55b5', secundaria: '#ffffff' },
   cruzeiro: { principal: '#1b3fa6', secundaria: '#ffffff' },

@@ -5,6 +5,8 @@ describe('coresDoTime', () => {
   it('acha o time pelo nome curto, sem ligar para acento e maiúsculas', () => {
     expect(coresDoTime({ nomeCurto: 'São Paulo', nome: 'São Paulo FC' }).principal).toBe('#e8e8e8')
     expect(coresDoTime({ nomeCurto: 'GRÊMIO', nome: '' }).principal).toBe('#0a7fc2')
+    expect(coresDoTime({ nomeCurto: 'Athletico-PR', nome: 'CA Paranaense' }).principal).toBe('#d2102a')
+    expect(coresDoTime({ nomeCurto: 'Remo', nome: 'Clube do Remo' }).principal).toBe('#0d2a6b')
   })
 
   it('usa o nome completo e depois cores neutras', () => {

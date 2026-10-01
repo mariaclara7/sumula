@@ -28,9 +28,9 @@ export function Layout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-10 bg-grafite text-creme">
-        <Pagina className="flex h-[60px] items-center gap-4">
-          <Link to="/" className="text-2xl font-black tracking-[-.5px] hover:text-creme">
-            SÚMULA<span className="text-lima">.</span>
+        <Pagina className="flex h-[60px] items-center gap-2 sm:gap-4">
+          <Link to="/" className="shrink-0 text-xl font-black tracking-[-.5px] hover:text-creme sm:text-2xl">
+            <span className="text-[0.7em] text-lima">BRA</span>SÚMULA<span className="text-lima">.</span>
           </Link>
           <span className="hidden text-xs text-cinza md:inline">
             {NOME_COMPETICAO} {TEMPORADA}
