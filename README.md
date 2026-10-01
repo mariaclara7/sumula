@@ -101,10 +101,13 @@ que só existe durante o workflow.
 3. No registro.br, no painel do domínio, troque os servidores DNS pelos dois da Cloudflare. Se o DNSSEC estiver
    ligado no registro.br, desligue antes (dá para religar depois pela Cloudflare).
 4. Quando a Cloudflare mostrar o domínio como **Active** (de minutos a algumas horas):
-   - descomente `routes` no `wrangler.jsonc` deste repositório (`sumula.com.br` e `www`) e no
-     `publicacao/wrangler.jsonc` da api-sumula (`dados.sumula.com.br`), trocando pelo domínio escolhido;
-   - troque a variável `SUMULA_API_URL` para `https://dados.sumula.com.br`;
-   - rode **Coletor** e depois **Publicar**.
+   - coloque o domínio em `routes` no `wrangler.jsonc` deste repositório (o domínio e o `www`) e no
+     `publicacao/wrangler.jsonc` da api-sumula (`dados.` + domínio). Hoje estão com `brasumula.com.br`;
+   - troque a variável `SUMULA_API_URL` para `https://dados.brasumula.com.br`;
+   - rode **Coletor** e depois **Publicar**. A Cloudflare cria o DNS e o certificado (HTTPS) sozinha.
+
+   Não crie registros DNS (A ou CNAME) para esses endereços na mão: a Cloudflare recusa ligar o Worker
+   num nome que já tem registro.
 
 ### Testar a produção na sua máquina
 

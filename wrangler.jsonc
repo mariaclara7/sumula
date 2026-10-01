@@ -7,10 +7,12 @@
     "directory": "./dist",
     // Rotas como /times/123 ou /simulador entregam o index.html e o React Router assume.
     "not_found_handling": "single-page-application"
-  }
-  // Depois que o domínio estiver na Cloudflare, descomente para servir em sumula.com.br:
-  // , "routes": [
-  //   { "pattern": "sumula.com.br", "custom_domain": true },
-  //   { "pattern": "www.sumula.com.br", "custom_domain": true }
-  // ]
+  },
+  // O site fica em brasumula.com.br e www.brasumula.com.br. A Cloudflare cria o DNS e o certificado sozinha.
+  "routes": [
+    { "pattern": "brasumula.com.br", "custom_domain": true },
+    { "pattern": "www.brasumula.com.br", "custom_domain": true }
+  ],
+  // Mantém também o endereço sumula.brasumula.workers.dev.
+  "workers_dev": true
 }
