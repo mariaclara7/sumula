@@ -22,6 +22,9 @@
   --realce: rgb(198 244 50 / 0.3);
   /* Barra de destaque: grafite no claro, lima no escuro. */
   --forte: #111111;
+  /* Barra de rolagem das listas: bem clarinha. */
+  --rolagem: rgb(17 17 17 / 0.12);
+  --rolagem-forte: rgb(17 17 17 / 0.25);
 }
 
 :root[data-tema='escuro'] {
@@ -36,6 +39,8 @@
   --texto-invertido: #111111;
   --realce: rgb(198 244 50 / 0.14);
   --forte: #c6f432;
+  --rolagem: rgb(242 241 236 / 0.14);
+  --rolagem-forte: rgb(242 241 236 / 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,6 +56,8 @@
     --texto-invertido: #111111;
     --realce: rgb(198 244 50 / 0.14);
     --forte: #c6f432;
+    --rolagem: rgb(242 241 236 / 0.14);
+    --rolagem-forte: rgb(242 241 236 / 0.3);
   }
 }
 
@@ -115,6 +122,28 @@
 }
 @utility inclinado-p {
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+/* Barra de rolagem fininha e discreta (listas das caixas de seleção). Chrome, Edge e Safari usam as
+ * regras ::-webkit-scrollbar, que deixam a barra mais fina que o "thin" padrão; o Firefox usa scrollbar-*. */
+@utility rolagem-sutil {
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--rolagem);
+    border-radius: 999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--rolagem-forte);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rolagem) transparent;
+  }
 }
 /* Sombra "dura" dos botões e cards clicáveis. */
 @utility sombra-dura {

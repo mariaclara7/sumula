@@ -144,7 +144,7 @@ export function Seletor<T>({ rotulo, opcoes, valor, aoMudar, children, className
           role="listbox"
           aria-label={rotulo}
           tabIndex={-1}
-          className={`absolute top-[calc(100%+6px)] z-50 max-h-[min(360px,60dvh)] w-max min-w-full max-w-[min(320px,calc(100vw-32px))] overflow-y-auto border-2 border-texto bg-superficie py-1 text-texto shadow-[5px_5px_0_var(--texto)] ${
+          className={`absolute top-[calc(100%+6px)] z-50 max-h-[min(360px,60dvh)] w-max min-w-full max-w-[min(320px,calc(100vw-32px))] rolagem-sutil overflow-y-auto border-2 border-texto bg-superficie py-1 text-texto shadow-[5px_5px_0_var(--texto)] ${
             alinhar === 'direita' ? 'right-0' : 'left-0'
           }`}
         >
