@@ -24,7 +24,7 @@ type Props = {
 
 // No celular ficam só posição, time, pontos e forma; o resto aparece a partir do tablet.
 const COLUNAS =
-  'grid grid-cols-[40px_minmax(0,1fr)_40px_104px] md:grid-cols-[64px_minmax(0,1fr)_64px_60px_44px_110px_56px_170px_150px]'
+  'grid grid-cols-[40px_minmax(0,1fr)_40px_104px] md:grid-cols-[64px_minmax(0,1fr)_64px_60px_44px_110px_48px_48px_56px_150px_150px]'
 const SO_TABLET = 'hidden md:flex'
 
 export function TabelaClassificacao({ linhas, mostrarZonas, posicaoNormal, destaque, progresso = 1 }: Props) {
@@ -35,7 +35,8 @@ export function TabelaClassificacao({ linhas, mostrarZonas, posicaoNormal, desta
   return (
     <div>
       <div className="overflow-x-auto">
-        <div role="table" aria-label="Classificação" className="md:min-w-[980px]">
+        {/* md:pr-1.5: espaço para a linha deslizar no hover sem criar barra de rolagem. */}
+        <div role="table" aria-label="Classificação" className="md:min-w-[1000px] md:pr-1.5">
           <div
             role="row"
             className={`${COLUNAS} h-8 items-center border-b-2 border-texto text-center font-mono text-[10px] font-extrabold tracking-[1px] text-texto-2 md:h-9 md:text-[11px]`}
@@ -55,6 +56,12 @@ export function TabelaClassificacao({ linhas, mostrarZonas, posicaoNormal, desta
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
               <abbr title="Vitórias, empates e derrotas" className="no-underline">V · E · D</abbr>
+            </span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Gols pró" className="no-underline">GP</abbr>
+            </span>
+            <span role="columnheader" className={`${SO_TABLET} justify-center`}>
+              <abbr title="Gols contra" className="no-underline">GC</abbr>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
               <abbr title="Saldo de gols" className="no-underline">SG</abbr>
@@ -123,6 +130,12 @@ export function TabelaClassificacao({ linhas, mostrarZonas, posicaoNormal, desta
                   </span>
                   <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium`}>
                     {`${linha.vitorias} · ${linha.empates} · ${linha.derrotas}`}
+                  </span>
+                  <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium`}>
+                    {linha.golsPro}
+                  </span>
+                  <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium text-texto-2`}>
+                    {linha.golsContra}
                   </span>
                   <span role="cell" className={`${SO_TABLET} justify-center font-mono text-[13px] font-medium`}>
                     {formatarSaldo(linha.saldo)}

@@ -4,7 +4,9 @@ import { useTimes } from '../api/consultas'
 import { NOME_COMPETICAO, TEMPORADA } from '../config'
 import { usePreferencias } from '../preferencias'
 import { Escudo } from './Escudo'
+import { Logo } from './Logo'
 import { Pagina } from './Pagina'
+import { Rodape } from './Rodape'
 
 const LINKS = [
   { para: '/', rotulo: 'Classificação' },
@@ -30,7 +32,7 @@ export function Layout() {
       <header className="sticky top-0 z-10 bg-grafite text-creme">
         <Pagina className="flex h-[60px] items-center gap-2 sm:gap-4">
           <Link to="/" className="shrink-0 text-xl font-black tracking-[-.5px] hover:text-creme sm:text-2xl">
-            <span className="text-[0.7em] text-lima">BRA</span>SÚMULA<span className="text-lima">.</span>
+            <Logo />
           </Link>
           <span className="hidden text-xs text-cinza md:inline">
             {NOME_COMPETICAO} {TEMPORADA}
@@ -64,9 +66,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer>
-        <Pagina className="pb-8 text-xs text-texto-2">Dados: football-data.org</Pagina>
-      </footer>
+      <Rodape />
     </div>
   )
 }

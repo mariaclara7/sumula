@@ -4,7 +4,7 @@ type Props = { children: React.ReactNode; className?: string }
 export function TituloPagina({ children, className = '' }: Props) {
   return (
     <h1
-      className={`m-0 text-[clamp(32px,11vw,48px)] leading-[.85] break-words font-black tracking-[-2px] uppercase md:text-[96px] md:tracking-[-4px] ${className}`}
+      className={`m-0 text-[clamp(29px,10vw,43px)] leading-[.85] break-words font-black tracking-[-1.8px] uppercase md:text-[86px] md:tracking-[-3.6px] ${className}`}
     >
       {children}
     </h1>

@@ -90,7 +90,7 @@ function TabelaTempos({ times, progresso }: { times: DesempenhoPorTempo[]; progr
 
   return (
     <div className="mt-7 overflow-x-auto">
-      <div role="table" aria-label="Desempenho por tempo de jogo" className="min-w-[900px]">
+      <div role="table" aria-label="Desempenho por tempo de jogo" className="min-w-[900px] pr-1.5">
         <div role="row" className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center`}>
           <span role="columnheader" className={`${cabecalho} text-left`}>TIME</span>
           <span role="columnheader" className={cabecalho}>

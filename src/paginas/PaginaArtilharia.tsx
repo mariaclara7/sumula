@@ -58,7 +58,7 @@ export function PaginaArtilharia() {
 
         {lista.length > 3 && (
           <div className="mt-[26px] overflow-x-auto">
-            <div role="table" aria-label="Artilharia" className="min-w-[640px]">
+            <div role="table" aria-label="Artilharia" className="min-w-[640px] pr-1.5">
               <div role="row" className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center`}>
                 <span role="columnheader" className={cabecalho}>#</span>
                 <span role="columnheader" className={`${cabecalho} text-left`}>JOGADOR</span>

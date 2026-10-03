@@ -77,7 +77,7 @@ export function PaginaChances() {
         </div>
 
         <div className="mt-7 overflow-x-auto">
-          <div role="table" aria-label="Chances de cada time" className="min-w-[940px]">
+          <div role="table" aria-label="Chances de cada time" className="min-w-[940px] pr-1.5">
             <div
               role="row"
               className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}

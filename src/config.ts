@@ -3,6 +3,15 @@ export const COMPETICAO = 'BSA'
 export const TEMPORADA = 2026
 export const NOME_COMPETICAO = 'Brasileirão Série A'
 
+/** Quem faz o site, no rodapé. Links sem endereço não aparecem. */
+export const AUTORIA: { nome: string; links: { rotulo: string; url: string }[] } = {
+  nome: '',
+  links: [
+    { rotulo: 'GitHub', url: 'https://github.com/mariaclara7' },
+    { rotulo: 'LinkedIn', url: '' },
+  ],
+}
+
 export type Zona = {
   nome: string
   /** Posições da zona, inclusivas. */

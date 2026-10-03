@@ -56,6 +56,10 @@ As cores de cada clube ficam em `src/util/cores.ts`, porque a API não as fornec
 (OVR do time, ataque, defesa e atributos dos jogadores) são fórmulas simples sobre os números reais, em `src/util/notas.ts`.
 Números que contam e barras que crescem respeitam o "reduzir movimento" do sistema.
 
+O nome e os links do rodapé (GitHub, LinkedIn...) ficam em `AUTORIA`, em `src/config.ts`; link sem endereço não aparece.
+O favicon é `public/favicon.svg`, com versões em PNG para navegadores sem SVG (`favicon-32.png`) e para o iPhone
+(`apple-touch-icon.png`).
+
 ## Publicação
 
 O site e os dados ficam na **Cloudflare**, em dois Workers só com arquivos estáticos (grátis e sem limite de
