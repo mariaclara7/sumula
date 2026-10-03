@@ -55,7 +55,8 @@ export function PaginaChances() {
     const porcentagem = (t: ProbabilidadesTime | undefined, zona: Zona) =>
       t ? `${contar(chance(t, zona) * 100, progresso)}%` : '—'
 
-    const ordenados = [...data.times].sort((a, b) => b.pontosEsperados - a.pontosEsperados)
+    // Mesma ordem da classificação atual, para a coluna POS ficar em sequência.
+    const ordenados = [...data.times].sort((a, b) => a.posicaoAtual - b.posicaoAtual)
 
     return (
       <>
