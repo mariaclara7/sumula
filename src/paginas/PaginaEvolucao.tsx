@@ -4,6 +4,7 @@ import type { EvolucaoTime, Time } from '../api/tipos'
 import { Abas } from '../componentes/Abas'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
 import { Pagina } from '../componentes/Pagina'
+import { TabelaDados } from '../componentes/TabelaDados'
 import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { COR_FUNDO } from '../componentes/coresSeries'
 import { GraficoComparativo, type Medida, type SerieTime } from '../componentes/GraficoComparativo'
@@ -99,40 +100,38 @@ export function PaginaEvolucao() {
         <GraficoComparativo series={series} medida={medida} quantidadeTimes={times.data.lista.length} progresso={progresso} />
 
         {series.length > 0 && (
-          <details className="mt-2 border-t border-borda px-1.5 pt-2 text-sm">
-            <summary className="cursor-pointer text-texto-2">Ver dados em tabela</summary>
-            <div className="max-h-72 overflow-auto">
-              <table className="mt-2 w-full text-center tabular-nums">
-                <thead className="text-xs text-texto-3">
-                  <tr>
-                    <th className="py-1 font-medium">Rodada</th>
-                    {series.map((s) => (
-                      <th key={s.time.id} className="px-2 py-1 font-medium">
-                        {s.time.sigla}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(series.reduce((maior, s) => (s.pontos.length > maior.length ? s.pontos : maior), series[0].pontos)).map(
-                    ({ rodada }) => (
-                      <tr key={rodada}>
-                        <td className="py-0.5">{rodada}</td>
-                        {series.map((s) => {
-                          const ponto = s.pontos.find((p) => p.rodada === rodada)
-                          return (
-                            <td key={s.time.id} className="px-2 py-0.5">
-                              {ponto ? (medida === 'posicao' ? `${ponto.posicao}º` : ponto.pontos) : '—'}
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    ),
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </details>
+          <TabelaDados
+            className="mt-2"
+            cabecalho={
+              <>
+                <th scope="col">RODADA</th>
+                {series.map((s) => (
+                  <th key={s.time.id} scope="col" className="px-2">
+                    <abbr title={s.time.nomeCurto} className="inline-flex items-center gap-1.5 no-underline">
+                      <span aria-hidden className={`size-2.5 rounded-full ${COR_FUNDO[s.vaga]}`} />
+                      {s.time.sigla}
+                    </abbr>
+                  </th>
+                ))}
+              </>
+            }
+          >
+            {series
+              .reduce((maior, s) => (s.pontos.length > maior.length ? s.pontos : maior), series[0].pontos)
+              .map(({ rodada }) => (
+                <tr key={rodada}>
+                  <td className="font-sans font-black">{rodada}</td>
+                  {series.map((s) => {
+                    const ponto = s.pontos.find((p) => p.rodada === rodada)
+                    return (
+                      <td key={s.time.id} className="px-2">
+                        {ponto ? (medida === 'posicao' ? `${ponto.posicao}º` : ponto.pontos) : '—'}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+          </TabelaDados>
         )}
       </section>
 

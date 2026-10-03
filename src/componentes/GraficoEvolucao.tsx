@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PontoEvolucao } from '../api/tipos'
+import { TabelaDados, Variacao } from './TabelaDados'
 
 type Props = {
   pontos: PontoEvolucao[]
@@ -121,29 +122,40 @@ export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime, progresso =
         )}
       </div>
 
-      <details className="border-t border-borda px-4 py-2 text-sm">
-        <summary className="cursor-pointer text-texto-2">Ver dados em tabela</summary>
-        <div className="max-h-64 overflow-y-auto">
-          <table className="mt-2 w-full text-center tabular-nums">
-            <thead className="text-xs text-texto-3">
-              <tr>
-                <th className="py-1 font-medium">Rodada</th>
-                <th className="py-1 font-medium">Posição</th>
-                <th className="py-1 font-medium">Pontos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pontos.map((p) => (
-                <tr key={p.rodada}>
-                  <td className="py-0.5">{p.rodada}</td>
-                  <td className="py-0.5">{p.posicao}º</td>
-                  <td className="py-0.5">{p.pontos}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      <TabelaDados
+        className="mx-4"
+        cabecalho={
+          <>
+            <th scope="col">RODADA</th>
+            <th scope="col">POSIÇÃO</th>
+            <th scope="col">
+              <abbr title="Variação de posição em relação à rodada anterior" className="no-underline">
+                ▲▼
+              </abbr>
+            </th>
+            <th scope="col">PONTOS</th>
+            <th scope="col">NA RODADA</th>
+          </>
+        }
+      >
+        {pontos.map((p, i) => {
+          const anterior = i > 0 ? pontos[i - 1] : undefined
+          const ganhos = p.pontos - (anterior?.pontos ?? 0)
+          return (
+            <tr key={p.rodada}>
+              <td className="font-sans font-black">{p.rodada}</td>
+              <td className="font-sans text-[15px] font-black">{p.posicao}º</td>
+              <td className="text-xs font-extrabold">
+                <Variacao valor={anterior ? anterior.posicao - p.posicao : null} />
+              </td>
+              <td>{p.pontos}</td>
+              <td className={ganhos === 3 ? 'font-extrabold text-verde' : ganhos === 0 ? 'text-texto-2' : ''}>
+                {ganhos > 0 ? `+${ganhos}` : ganhos}
+              </td>
+            </tr>
+          )
+        })}
+      </TabelaDados>
     </div>
   )
 }
