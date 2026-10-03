@@ -4,6 +4,7 @@ import type { Artilheiro, Time } from '../api/tipos'
 import { CartaoJogador } from '../componentes/CartaoJogador'
 import { Confete } from '../componentes/Confete'
 import { Escudo } from '../componentes/Escudo'
+import { CreditoFoto, FotoJogador } from '../componentes/FotoJogador'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
 import { Pagina } from '../componentes/Pagina'
 import { TituloPagina } from '../componentes/TituloPagina'
@@ -157,16 +158,24 @@ function CardPodio({ artilheiro, posicao, time, progresso, aoAbrir, confete }: P
         primeiro ? 'bg-grafite text-creme' : 'bg-superficie text-texto'
       }`}
     >
-      <div className="flex w-full items-start justify-between">
+      {/* Com foto, ela ocupa o canto de cima à direita (no lugar do número da posição) e some em degradê. */}
+      <FotoJogador
+        foto={artilheiro.foto}
+        nome={artilheiro.nome}
+        className="absolute top-0 right-0 h-[62%] w-[60%] [mask-image:linear-gradient(to_bottom,black_50%,transparent),linear-gradient(to_left,black_70%,transparent)] [mask-composite:intersect]"
+      />
+      <div className="relative flex w-full items-start justify-between">
         <div className="flex flex-col leading-[.9]">
           <span className="text-[52px] font-black tracking-[-2px]">{contar(notaDoJogador(artilheiro), progresso)}</span>
           <span className="font-mono text-xs font-extrabold tracking-[2px]">ATA</span>
         </div>
-        <span aria-hidden className="text-[64px] leading-none font-black opacity-[.18]">
-          {posicao}
-        </span>
+        {!artilheiro.foto && (
+          <span aria-hidden className="text-[64px] leading-none font-black opacity-[.18]">
+            {posicao}
+          </span>
+        )}
       </div>
-      <div className="w-full">
+      <div className="relative w-full">
         <div className="text-[26px] leading-[1.05] font-black tracking-[-.5px]">{artilheiro.nome}</div>
         {time && (
           <div className="mt-2 flex items-center gap-2 text-[13px] font-bold">
@@ -188,6 +197,10 @@ function CardPodio({ artilheiro, posicao, time, progresso, aoAbrir, confete }: P
             <div className="text-[11px] opacity-70">jogos</div>
           </div>
         </div>
+        {/* Dentro de um botão não pode ter link: o crédito completo, com link, fica no card do jogador. */}
+        {artilheiro.foto && (
+          <CreditoFoto foto={artilheiro.foto} link={false} className="mt-2 block truncate text-[10px] opacity-60" />
+        )}
       </div>
       {primeiro && <Confete disparo={confete} />}
     </button>

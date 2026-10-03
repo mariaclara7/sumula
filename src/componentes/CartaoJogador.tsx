@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { Artilheiro, Time } from '../api/tipos'
 import { atributosDoJogador, notaDoJogador } from '../util/notas'
 import { Escudo } from './Escudo'
+import { CreditoFoto, FotoJogador } from './FotoJogador'
 
 type Props = {
   artilheiro: Artilheiro
@@ -50,7 +51,7 @@ export function CartaoJogador({ artilheiro, posicao, time, golsDoTime, aoFechar 
     return () => window.removeEventListener('keydown', aoTeclar)
   })
 
-  const { gols, jogos, assistencias } = artilheiro
+  const { gols, jogos, assistencias, foto } = artilheiro
   const participacao =
     golsDoTime && golsDoTime > 0 ? `${Math.round(((gols + (assistencias ?? 0)) / golsDoTime) * 100)}%` : '—'
   const numeros = [
@@ -87,18 +88,35 @@ export function CartaoJogador({ artilheiro, posicao, time, golsDoTime, aoFechar 
           </button>
         </div>
 
-        <div className="corte-duplo-p bg-grafite p-6 text-creme">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col leading-[.9]">
-              <span className="text-[64px] font-black tracking-[-2px] text-lima">{notaDoJogador(artilheiro)}</span>
-              <span className="font-mono text-xs font-extrabold tracking-[2px]">ATA · {posicao}º</span>
+        <div>
+          <div className="corte-duplo-p relative overflow-hidden bg-grafite p-6 text-creme">
+            {/* A foto ocupa a direita do card e some em degradê por trás do texto. */}
+            <FotoJogador
+              foto={foto}
+              nome={artilheiro.nome}
+              className="absolute inset-y-0 right-0 h-full w-[58%] [mask-image:linear-gradient(to_left,black_55%,transparent)]"
+            />
+            <div className="relative flex items-start justify-between">
+              <div className="flex flex-col leading-[.9]">
+                <span className="text-[64px] font-black tracking-[-2px] text-lima">{notaDoJogador(artilheiro)}</span>
+                <span className="font-mono text-xs font-extrabold tracking-[2px]">ATA · {posicao}º</span>
+              </div>
+              {time && !foto && <Escudo time={time} tamanho={56} circulo contorno="0 0 0 2px #f2f1ec" />}
             </div>
-            {time && <Escudo time={time} tamanho={56} circulo contorno="0 0 0 2px #f2f1ec" />}
+            <div
+              id="cartao-jogador-nome"
+              className={`relative mt-[18px] text-[30px] leading-[1.05] font-black ${foto ? 'max-w-[65%] [text-shadow:0_1px_8px_#111]' : ''}`}
+            >
+              {artilheiro.nome}
+            </div>
+            {time && (
+              <div className="relative mt-1 flex items-center gap-2 text-sm text-cinza">
+                {foto && <Escudo time={time} tamanho={20} circulo contorno="0 0 0 1.5px #f2f1ec" />}
+                {time.nomeCurto}
+              </div>
+            )}
           </div>
-          <div id="cartao-jogador-nome" className="mt-[18px] text-[30px] leading-[1.05] font-black">
-            {artilheiro.nome}
-          </div>
-          {time && <div className="mt-1 text-sm text-cinza">{time.nomeCurto}</div>}
+          {foto && <CreditoFoto foto={foto} className="mt-1.5 block text-right text-[11px] text-texto-2" />}
         </div>
 
         <ul className="flex flex-col gap-3">
