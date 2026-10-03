@@ -5,10 +5,12 @@ export const NOME_COMPETICAO = 'Brasileirão Série A'
 
 /** Quem faz o site, no rodapé. Links sem endereço não aparecem. */
 export const AUTORIA: { nome: string; links: { rotulo: string; url: string }[] } = {
-  nome: '',
+  nome: 'Maria Clara',
   links: [
+    { rotulo: 'LinkedIn', url: 'https://www.linkedin.com/in/mariaclara733/' },
     { rotulo: 'GitHub', url: 'https://github.com/mariaclara7' },
-    { rotulo: 'LinkedIn', url: '' },
+    { rotulo: 'Portfólio', url: 'https://mariaclaradev.pages.dev/' },
+    { rotulo: 'E-mail', url: 'mailto:mcadelmonico@gmail.com' },
   ],
 }
 

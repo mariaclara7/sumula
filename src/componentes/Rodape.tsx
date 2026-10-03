@@ -22,11 +22,12 @@ export function Rodape() {
               <a
                 key={link.rotulo}
                 href={link.url}
-                target="_blank"
+                target={link.url.startsWith('mailto:') ? undefined : '_blank'}
                 rel="noreferrer"
                 className="inclinado bg-creme/10 px-4 py-2 text-sm font-bold text-creme transition-colors hover:bg-lima hover:text-grafite"
               >
-                {link.rotulo} ↗
+                {link.rotulo}
+                {!link.url.startsWith('mailto:') && ' ↗'}
               </a>
             ))}
           </nav>
