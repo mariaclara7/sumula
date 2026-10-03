@@ -33,7 +33,9 @@ const zona = (nome: string) => ZONAS.find((z) => z.nome === nome)!
 /**
  * Cards que se alternam no topo da classificação: líder, vice, 3º, quem está "em chamas" (3+ vitórias
  * seguidas), quem está "em choque" (3+ derrotas seguidas) e o lanterna. Os de sequência só aparecem quando
- * existe a sequência; todos os números saem da tabela, das sequências e da simulação.
+ * existe a sequência, e com um time que ainda não está em outro card (se o líder tem a maior sequência, o card
+ * "em chamas" vai para a maior sequência entre os outros). Todos os números saem da tabela, das sequências e da
+ * simulação.
  */
 export function gerarDestaques({ linhas, estatisticas = [], probabilidades = [], artilharia = [] }: Entrada): CardDestaque[] {
   if (linhas.length < 3) return []
@@ -103,8 +105,14 @@ export function gerarDestaques({ linhas, estatisticas = [], probabilidades = [],
     ],
   })
 
-  const [emChamas] = emSequencia(estatisticas, linhas, 'vitorias')
+  // Times que já têm card fixo (o lanterna entra no fim, mas também conta).
+  const lanterna = linhas[linhas.length - 1]
+  const usados = new Set([lider.time.id, vice.time.id, terceiro.time.id, lanterna.time.id])
+  const livre = (s: { linha: LinhaClassificacao }) => !usados.has(s.linha.time.id)
+
+  const emChamas = emSequencia(estatisticas, linhas, 'vitorias').find(livre)
   if (emChamas) {
+    usados.add(emChamas.linha.time.id)
     const { linha, quantidade } = emChamas
     // Para quem está em cima, a chance que importa é a de Libertadores; para quem está embaixo, a de cair.
     const emCima = linha.posicao <= libertadores.ate * 2
@@ -126,7 +134,7 @@ export function gerarDestaques({ linhas, estatisticas = [], probabilidades = [],
     })
   }
 
-  const [emChoque] = emSequencia(estatisticas, linhas, 'derrotas')
+  const emChoque = emSequencia(estatisticas, linhas, 'derrotas').find(livre)
   if (emChoque) {
     const { linha, quantidade } = emChoque
     cards.push({
@@ -148,7 +156,6 @@ export function gerarDestaques({ linhas, estatisticas = [], probabilidades = [],
     })
   }
 
-  const lanterna = linhas[linhas.length - 1]
   const ultimoSeguro = linhas[ULTIMA_POSICAO_SEGURA - 1]
   if (lanterna && ultimoSeguro && lanterna.posicao > ULTIMA_POSICAO_SEGURA) {
     cards.push({

@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { contar, movimentoReduzido, useAnimacao } from '../util/animacao'
 import { coresDoTime } from '../util/cores'
+import { Confete } from './Confete'
 import type { CardDestaque } from '../util/destaques'
 import { useRotacao } from './useRotacao'
 
@@ -15,6 +16,8 @@ export function CarrosselDestaques({ cards }: { cards: CardDestaque[] }) {
   const rotacao = useRotacao(cards.length, DURACAO)
   const { progresso, repetir } = useAnimacao(cards.length > 0)
   const [reduzido] = useState(movimentoReduzido)
+  // Confete do líder: uma rajada quando a página abre (o líder é o primeiro card) e outra a cada clique nele.
+  const [confete, setConfete] = useState(1)
 
   // Os números contam de novo a cada card.
   useEffect(() => {
@@ -48,13 +51,15 @@ export function CarrosselDestaques({ cards }: { cards: CardDestaque[] }) {
         if (!evento.currentTarget.contains(evento.relatedTarget)) rotacao.retomar()
       }}
     >
-      <div className="[perspective:1400px]">
+      <div className="relative [perspective:1400px]">
         <div style={giro}>
-          <Link
-            to={`/times/${card.time.id}`}
-            aria-label={`${card.rotulo}: ${card.time.nomeCurto}, ${card.grande} ${card.unidade}. Ver o time.`}
-            className="corte-duplo relative block h-[272px] overflow-hidden bg-grafite p-6 text-creme hover:text-creme"
-            style={choque ? { animation: 'tremor 2.4s linear infinite' } : undefined}
+          <Moldura
+            card={card}
+            choque={choque}
+            aoComemorar={() => {
+              setConfete((c) => c + 1)
+              repetir()
+            }}
           >
             <span
               aria-hidden
@@ -105,7 +110,11 @@ export function CarrosselDestaques({ cards }: { cards: CardDestaque[] }) {
                 </div>
               ))}
             </div>
-          </Link>
+          </Moldura>
+        </div>
+        {/* Fora do card que gira, para a rajada não sumir nem girar junto na troca. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <Confete disparo={confete} />
         </div>
       </div>
 
@@ -132,6 +141,52 @@ export function CarrosselDestaques({ cards }: { cards: CardDestaque[] }) {
         })}
       </div>
     </section>
+  )
+}
+
+/**
+ * O card em si. O do líder é um botão que solta confete e faz os números contarem de novo (como era o
+ * card do líder); os outros levam à página do time.
+ */
+function Moldura({
+  card,
+  choque,
+  aoComemorar,
+  children,
+}: {
+  card: CardDestaque
+  choque: boolean
+  aoComemorar: () => void
+  children: ReactNode
+}) {
+  const classe = 'corte-duplo relative block h-[272px] cursor-pointer overflow-hidden bg-grafite p-6 text-creme hover:text-creme'
+  const estilo = choque ? { animation: 'tremor 2.4s linear infinite' } : undefined
+  const descricao = `${card.rotulo}: ${card.time.nomeCurto}, ${card.grande} ${card.unidade}.`
+
+  if (card.chave === 'lider')
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`${descricao} Clique para comemorar.`}
+        onClick={aoComemorar}
+        onKeyDown={(evento) => {
+          if (evento.key === 'Enter' || evento.key === ' ') {
+            evento.preventDefault()
+            aoComemorar()
+          }
+        }}
+        className={`${classe} outline-offset-4`}
+        style={estilo}
+      >
+        {children}
+      </div>
+    )
+
+  return (
+    <Link to={`/times/${card.time.id}`} aria-label={`${descricao} Ver o time.`} className={classe} style={estilo}>
+      {children}
+    </Link>
   )
 }
 

@@ -49,6 +49,23 @@ describe('gerarDestaques', () => {
     expect(choque.numeros.at(-1)).toEqual({ valor: 0, rotulo: 'pts nos últimos 5' })
   })
 
+  it('não repete time: se o líder tem a maior sequência, "em chamas" vai para o próximo', () => {
+    const estatisticas = [
+      estatistica(1, { vitorias: 6 }),
+      estatistica(9, { vitorias: 4 }),
+      estatistica(20, { derrotas: 7 }),
+      estatistica(15, { derrotas: 3 }),
+    ]
+    const cards = gerarDestaques({ linhas, estatisticas })
+    expect(cards.find((c) => c.chave === 'chamas')?.time.id).toBe(9)
+    expect(cards.find((c) => c.chave === 'choque')?.time.id).toBe(15)
+    expect(new Set(cards.map((c) => c.time.id)).size).toBe(cards.length)
+
+    // Só o líder em sequência: não há card "em chamas".
+    const soLider = gerarDestaques({ linhas, estatisticas: [estatistica(1, { vitorias: 6 })] })
+    expect(soLider.map((c) => c.chave)).not.toContain('chamas')
+  })
+
   it('usa a chance certa no anel de cada card', () => {
     const posicoes = (de: number) => Array.from({ length: 20 }, (_, i) => (i === de - 1 ? 1 : 0))
     const probabilidades = linhas.map((l) => ({ time: l.time, posicoes: posicoes(l.posicao) }) as ProbabilidadesTime)
