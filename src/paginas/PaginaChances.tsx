@@ -1,3 +1,4 @@
+import { Fragment, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useProbabilidades } from '../api/consultas'
 import type { ProbabilidadesTime } from '../api/tipos'
@@ -27,11 +28,21 @@ const COR_BARRA: Record<string, string> = { Título: 'bg-texto' }
 const COLUNAS = 'grid grid-cols-[52px_minmax(160px,1fr)_52px_92px_repeat(5,110px)]'
 const faixa = (nome: string) => FAIXAS_CHANCES.find((f) => f.nome === nome)!
 
+/** Coluna pela qual a tabela está ordenada. Começa pela posição atual, como a classificação. */
+type Ordem = { chave: string; crescente: boolean }
+const ORDEM_INICIAL: Ordem = { chave: 'pos', crescente: true }
+
 export function PaginaChances() {
   const { data, isPending, isError, refetch } = useProbabilidades()
   const { progresso, repetir } = useAnimacao(data !== undefined)
   const { meuTime } = usePreferencias()
   const navegar = useNavigate()
+  const [ordem, setOrdem] = useState<Ordem>(ORDEM_INICIAL)
+
+  /** Clicar na coluna ordena por ela; clicar de novo inverte. Posição começa crescente, o resto do maior para o menor. */
+  function ordenarPor(chave: string) {
+    setOrdem((atual) => (atual.chave === chave ? { chave, crescente: !atual.crescente } : { chave, crescente: chave === 'pos' }))
+  }
 
   const conteudo = () => {
     if (isPending) return <Carregando />
@@ -55,8 +66,37 @@ export function PaginaChances() {
     const porcentagem = (t: ProbabilidadesTime | undefined, zona: Zona) =>
       t ? `${contar(chance(t, zona) * 100, progresso)}%` : '—'
 
-    // Mesma ordem da classificação atual, para a coluna POS ficar em sequência.
-    const ordenados = [...data.times].sort((a, b) => a.posicaoAtual - b.posicaoAtual)
+    const valores: Record<string, (t: ProbabilidadesTime) => number> = {
+      pos: (t) => t.posicaoAtual,
+      pts: (t) => t.pontosAtuais,
+      esp: (t) => t.pontosEsperados,
+      ...Object.fromEntries(FAIXAS_CHANCES.map((f) => [f.nome, (t: ProbabilidadesTime) => chance(t, f)])),
+    }
+    const valor = valores[ordem.chave] ?? valores.pos
+    // Empate na coluna escolhida: vale a posição atual.
+    const ordenados = [...data.times].sort(
+      (a, b) => (ordem.crescente ? valor(a) - valor(b) : valor(b) - valor(a)) || a.posicaoAtual - b.posicaoAtual,
+    )
+    const cabecalho = (chave: string, titulo: string, rotulo: ReactNode, alinhamento = 'justify-center') => {
+      const ativa = ordem.chave === chave
+      return (
+        <span
+          role="columnheader"
+          aria-sort={ativa ? (ordem.crescente ? 'ascending' : 'descending') : 'none'}
+          className={`flex ${alinhamento}`}
+        >
+          <button
+            type="button"
+            title={`Ordenar por ${titulo.toLowerCase()}`}
+            onClick={() => ordenarPor(chave)}
+            className={`cursor-pointer px-1.5 py-1 tracking-[1px] whitespace-nowrap ${ativa ? 'bg-texto text-texto-invertido' : 'hover:text-texto'}`}
+          >
+            {rotulo}
+            {ativa && <span aria-hidden>{ordem.crescente ? ' ▲' : ' ▼'}</span>}
+          </button>
+        </span>
+      )
+    }
 
     return (
       <>
@@ -77,26 +117,19 @@ export function PaginaChances() {
           />
         </div>
 
-        <div className="mt-7 overflow-x-auto">
+        <p className="mt-7 text-[13px] text-texto-2">Clique no nome de uma coluna para ordenar a tabela por ela.</p>
+        <div className="mt-2 overflow-x-auto">
           <div role="table" aria-label="Chances de cada time" className="min-w-[940px] pr-1.5">
             <div
               role="row"
               className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}
             >
-              <span role="columnheader">
-                <abbr title="Posição atual" className="no-underline">POS</abbr>
-              </span>
+              {cabecalho('pos', 'Posição atual', 'POS')}
               <span role="columnheader" className="text-left">TIME</span>
-              <span role="columnheader">
-                <abbr title="Pontos atuais" className="no-underline">PTS</abbr>
-              </span>
-              <span role="columnheader">
-                <abbr title="Pontos esperados ao fim do campeonato" className="no-underline">PTS ESP.</abbr>
-              </span>
+              {cabecalho('pts', 'Pontos atuais', 'PTS')}
+              {cabecalho('esp', 'Pontos esperados ao fim do campeonato', 'PTS ESP.')}
               {FAIXAS_CHANCES.map((f) => (
-                <span key={f.nome} role="columnheader">
-                  <abbr title={f.nome} className="no-underline">{ROTULO[f.nome] ?? f.nome}</abbr>
-                </span>
+                <Fragment key={f.nome}>{cabecalho(f.nome, `Chance de ${f.nome}`, ROTULO[f.nome] ?? f.nome)}</Fragment>
               ))}
             </div>
             {ordenados.map((linha) => (

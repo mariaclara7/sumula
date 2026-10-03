@@ -7,6 +7,7 @@ import { Escudo } from './Escudo'
 import { Logo } from './Logo'
 import { Pagina } from './Pagina'
 import { Rodape } from './Rodape'
+import { Seletor } from './Seletor'
 
 const LINKS = [
   { para: '/', rotulo: 'Classificação' },
@@ -78,7 +79,17 @@ function SeletorMeuTime() {
   const opcoes = [...(times.data?.lista ?? [])].sort((a, b) => a.nomeCurto.localeCompare(b.nomeCurto, 'pt-BR'))
 
   return (
-    <label className="relative flex cursor-pointer items-center gap-2 rounded-full border border-linha-escura py-1 pr-3 pl-1 text-[13px] transition-colors hover:border-lima focus-within:border-lima">
+    <Seletor
+      rotulo="Meu time (fica destacado nas tabelas)"
+      alinhar="direita"
+      valor={meuTime}
+      aoMudar={escolherMeuTime}
+      opcoes={[
+        { valor: null, rotulo: 'Nenhum', icone: <span aria-hidden className="size-5 rounded-full border-2 border-dashed border-texto-2" /> },
+        ...opcoes.map((opcao) => ({ valor: opcao.id, rotulo: opcao.nomeCurto, icone: <Escudo time={opcao} tamanho={20} circulo /> })),
+      ]}
+      className="flex items-center gap-2 rounded-full border border-linha-escura py-1 pr-3 pl-1 text-[13px] transition-colors hover:border-lima focus-visible:border-lima focus-visible:outline-none aria-expanded:border-lima"
+    >
       {time ? (
         <Escudo time={time} tamanho={26} circulo />
       ) : (
@@ -86,20 +97,7 @@ function SeletorMeuTime() {
       )}
       <span className="hidden text-cinza md:inline">Meu time</span>
       <span className="max-w-28 truncate font-extrabold">{time?.nomeCurto ?? 'Escolher'}</span>
-      <select
-        aria-label="Meu time (fica destacado nas tabelas)"
-        value={meuTime ?? ''}
-        onChange={(evento) => escolherMeuTime(evento.target.value ? Number(evento.target.value) : null)}
-        className="absolute inset-0 cursor-pointer opacity-0"
-      >
-        <option value="">Nenhum</option>
-        {opcoes.map((opcao) => (
-          <option key={opcao.id} value={opcao.id}>
-            {opcao.nomeCurto}
-          </option>
-        ))}
-      </select>
-    </label>
+    </Seletor>
   )
 }
 

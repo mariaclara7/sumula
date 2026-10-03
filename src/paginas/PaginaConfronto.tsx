@@ -6,6 +6,7 @@ import { Escudo } from '../componentes/Escudo'
 import { Carregando, Erro, Vazio } from '../componentes/Estado'
 import { ListaPartidas } from '../componentes/ListaPartidas'
 import { Pagina } from '../componentes/Pagina'
+import { Seletor } from '../componentes/Seletor'
 import { TituloPagina } from '../componentes/TituloPagina'
 import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
 import { usePreferencias } from '../preferencias'
@@ -244,26 +245,25 @@ type SeletorProps = {
 function SeletorTime({ rotulo, times, time, bloqueado, aoMudar }: SeletorProps) {
   const opcoes = [...times].sort((x, y) => x.nomeCurto.localeCompare(y.nomeCurto, 'pt-BR'))
   return (
-    <label className="relative flex min-w-0 cursor-pointer items-center gap-3 border-2 border-texto bg-superficie px-3.5 py-2.5 focus-within:shadow-[4px_4px_0_#c6f432]">
+    <Seletor
+      rotulo={rotulo === 'TIME A' ? 'Time A' : 'Time B'}
+      valor={time?.id ?? null}
+      aoMudar={(id) => aoMudar(String(id))}
+      opcoes={opcoes.map((opcao) => ({
+        valor: opcao.id,
+        rotulo: opcao.nomeCurto,
+        icone: <Escudo time={opcao} tamanho={22} />,
+        desabilitada: opcao.id === bloqueado,
+        detalhe: opcao.id === bloqueado ? 'no outro lado' : undefined,
+      }))}
+      className="flex w-full min-w-0 items-center gap-3 border-2 border-texto bg-superficie px-3.5 py-2.5 focus-visible:shadow-[4px_4px_0_#c6f432] focus-visible:outline-none aria-expanded:shadow-[4px_4px_0_#c6f432]"
+    >
       <span className="flex-none font-mono text-[11px] font-extrabold whitespace-nowrap text-texto-2">{rotulo}</span>
       {time && <Escudo time={time} tamanho={28} />}
       <span className="min-w-0 truncate text-base font-extrabold">{time?.nomeCurto ?? 'Escolha um time'}</span>
       <span aria-hidden className="ml-auto text-xs">
         ▼
       </span>
-      <select
-        aria-label={rotulo === 'TIME A' ? 'Time A' : 'Time B'}
-        value={time?.id ?? ''}
-        onChange={(evento) => aoMudar(evento.target.value)}
-        className="absolute inset-0 cursor-pointer opacity-0"
-      >
-        {!time && <option value="">Escolha um time</option>}
-        {opcoes.map((opcao) => (
-          <option key={opcao.id} value={opcao.id} disabled={opcao.id === bloqueado}>
-            {opcao.nomeCurto}
-          </option>
-        ))}
-      </select>
-    </label>
+    </Seletor>
   )
 }

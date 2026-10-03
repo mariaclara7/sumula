@@ -7,6 +7,7 @@ import { Escudo } from '../componentes/Escudo'
 import { BotaoPrincipal, Carregando, Erro, Vazio } from '../componentes/Estado'
 import { LegendaZonas } from '../componentes/LegendaZonas'
 import { Pagina } from '../componentes/Pagina'
+import { Seletor } from '../componentes/Seletor'
 import { TituloPagina } from '../componentes/TituloPagina'
 import { useDeslizar } from '../componentes/useDeslizar'
 import { COMPETICAO, TEMPORADA, ZONAS, zonaDaPosicao } from '../config'
@@ -270,21 +271,24 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
             >
               ◀
             </BotaoRodada>
-            <label className="flex-1 text-center">
-              <span className="sr-only">Escolher a rodada</span>
-              <select
-                value={rodada}
-                onChange={(evento) => irPara(Number(evento.target.value))}
-                className="w-full cursor-pointer bg-transparent text-center text-lg font-black"
+            <div className="flex flex-1 justify-center">
+              <Seletor
+                rotulo="Escolher a rodada"
+                valor={rodada}
+                aoMudar={irPara}
+                opcoes={rodadas.map((r) => ({
+                  valor: r,
+                  rotulo: `Rodada ${r}`,
+                  detalhe: pendentesPorRodada.get(r) ? `${pendentesPorRodada.get(r)} sem palpite` : undefined,
+                }))}
+                className="flex items-center gap-2 px-3 py-1 text-lg font-black hover:text-destaque focus-visible:bg-lima focus-visible:text-grafite focus-visible:outline-none"
               >
-                {rodadas.map((r) => (
-                  <option key={r} value={r}>
-                    Rodada {r}
-                    {pendentesPorRodada.get(r) ? ` (${pendentesPorRodada.get(r)})` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Rodada {rodada}
+                <span aria-hidden className="text-xs">
+                  ▼
+                </span>
+              </Seletor>
+            </div>
             <BotaoRodada
               rotulo="Próxima rodada"
               desabilitado={indice >= rodadas.length - 1}
