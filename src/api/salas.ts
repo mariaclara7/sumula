@@ -80,7 +80,7 @@ export function sairOuRemover(codigo: string, id: number, chave: string) {
 }
 
 /** A cada quanto tempo a sala busca os palpites dos outros (só com a aba visível). */
-const ATUALIZAR_A_CADA = 20_000
+const ATUALIZAR_A_CADA = 10_000
 
 /**
  * A sala, atualizada sozinha enquanto a aba está aberta. Manda o ETag da última resposta: se nada mudou, a API

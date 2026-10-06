@@ -155,36 +155,49 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   }, [sala.codigo, sala.nome])
 
   // ----- os meus palpites: editados aqui na hora e gravados na sala logo depois -----
+  // O rascunho é o que está nos campos, inclusive placar pela metade (um lado só). Para a sala vão só os jogos com
+  // os dois lados (o formato do link de compartilhar), então o rascunho continua valendo na tela depois de gravar:
+  // se a tela passasse a mostrar o que voltou da sala, o número digitado sumiria.
   const [rascunho, setRascunho] = useState<PalpitesUsuario | null>(null)
+  // O que esta aba gravou por último (null: ainda nada; vale o que está na sala).
+  const [gravado, setGravado] = useState<string | null>(null)
   const [tentativa, setTentativa] = useState(0)
   const [erroAoSalvar, setErroAoSalvar] = useState<string | null>(null)
 
+  const naSala = eu?.palpites ?? ''
+  const codigoRascunho = rascunho ? (codificarPalpites(rascunho) ?? '') : null
+  const pendente = codigoRascunho !== null && codigoRascunho !== (gravado ?? naSala)
+  // Se a sala mudou por outro aparelho (link pessoal) e aqui não há nada para gravar, vale o que está na sala.
+  const usarRascunho = rascunho !== null && (pendente || gravado === null || gravado === naSala)
+  const pelaMetade = usarRascunho
+    ? Object.values(rascunho).filter((p) => (p.mandante === null) !== (p.visitante === null)).length
+    : 0
+
   useEffect(() => {
-    if (!rascunho || !minha || !eu) return
+    if (!pendente || codigoRascunho === null || !minha || !eu) return
     const timer = setTimeout(
       async () => {
-        const codigoPalpites = codificarPalpites(rascunho) ?? ''
         try {
-          await gravarPalpitesNaSala(sala.codigo, minha.id, minha.chave, codigoPalpites)
+          await gravarPalpitesNaSala(sala.codigo, minha.id, minha.chave, codigoRascunho)
           queryClient.setQueryData<{ sala: Sala; etag: string | null }>(['sala', sala.codigo], (atual) =>
             atual
               ? {
                   ...atual,
                   sala: {
                     ...atual.sala,
-                    participantes: atual.sala.participantes.map((p) => (p.id === minha.id ? { ...p, palpites: codigoPalpites } : p)),
+                    participantes: atual.sala.participantes.map((p) => (p.id === minha.id ? { ...p, palpites: codigoRascunho } : p)),
                   },
                 }
               : atual,
           )
-          // Se a pessoa digitou mais enquanto gravava, o rascunho novo continua e grava na próxima volta.
-          setRascunho((atual) => (atual === rascunho ? null : atual))
+          setGravado(codigoRascunho)
           setErroAoSalvar(null)
         } catch (erro) {
           if (erro instanceof ErroSala && erro.status === 401) {
             esquecerParticipacao(sala.codigo)
             setMinhas(lerMinhasSalas())
             setRascunho(null)
+            setGravado(null)
             setAviso('Você não está mais nesta sala.')
             return
           }
@@ -197,15 +210,15 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     return () => clearTimeout(timer)
     // erroAoSalvar fica de fora: só define a espera da próxima tentativa.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rascunho, tentativa, minha, eu?.id, sala.codigo, queryClient])
+  }, [pendente, codigoRascunho, tentativa, minha, eu?.id, sala.codigo, queryClient])
 
   // Não deixa fechar a aba com palpite ainda não gravado.
   useEffect(() => {
-    if (!rascunho) return
+    if (!pendente) return
     const avisar = (evento: BeforeUnloadEvent) => evento.preventDefault()
     window.addEventListener('beforeunload', avisar)
     return () => window.removeEventListener('beforeunload', avisar)
-  }, [rascunho])
+  }, [pendente])
 
   // ----- tabela de cada pessoa -----
   const restantes = useMemo(() => partidas.filter(podePalpitar), [partidas])
@@ -216,7 +229,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     () =>
       sala.participantes.map((participante) => {
         const palpites =
-          participante.id === eu?.id && rascunho ? rascunho : (decodificarPalpites(participante.palpites) ?? {})
+          participante.id === eu?.id && usarRascunho ? rascunho : (decodificarPalpites(participante.palpites) ?? {})
         return {
           participante,
           palpites,
@@ -224,7 +237,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
           palpitados: restantes.filter((p) => palpites[p.id]?.mandante != null && palpites[p.id]?.visitante != null).length,
         }
       }),
-    [sala.participantes, eu?.id, rascunho, times.lista, partidas, restantes],
+    [sala.participantes, eu?.id, usarRascunho, rascunho, times.lista, partidas, restantes],
   )
 
   const [escolhido, setEscolhido] = useState<number | null>(null)
@@ -238,8 +251,9 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
 
   const meusPalpites = simulados.find((s) => s.participante.id === eu?.id)?.palpites ?? {}
 
+  // Parte do que está na tela (que pode ser a versão da sala, se ela mudou por outro aparelho).
   function mudarMeus(novos: (atuais: PalpitesUsuario) => PalpitesUsuario) {
-    setRascunho((atual) => novos(atual ?? meusPalpites))
+    setRascunho(novos(meusPalpites))
   }
 
   function alterar(partidaId: number, lado: keyof PlacarDigitado, texto: string) {
@@ -471,10 +485,19 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                     <span aria-live="polite" className="font-mono text-sm font-bold">
                       {erroAoSalvar ? (
                         <span className="text-vermelho">Não salvou ({erroAoSalvar}). Tentando de novo…</span>
-                      ) : rascunho ? (
+                      ) : pendente ? (
                         <span className="text-texto-2">Salvando…</span>
                       ) : (
-                        <span className="text-verde">Salvo na sala ✓</span>
+                        <span className="text-verde">
+                          Salvo na sala ✓
+                          {pelaMetade > 0 && (
+                            <span className="text-texto-2">
+                              {' '}
+                              · {pelaMetade === 1 ? 'falta' : 'faltam'} o outro lado de {pelaMetade}{' '}
+                              {pelaMetade === 1 ? 'placar' : 'placares'}
+                            </span>
+                          )}
+                        </span>
                       )}
                     </span>
                   </div>
