@@ -372,15 +372,38 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
           <Rotulo>SALA · CÓDIGO {formatarCodigo(sala.codigo)}</Rotulo>
           <TituloPagina className="mt-2">{sala.nome}</TituloPagina>
         </div>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="grid w-full grid-cols-2 gap-2.5 sm:flex sm:w-auto sm:flex-wrap">
           {!cheia && (
             <BotaoPrincipal
+              className="col-span-2"
               onClick={() =>
                 copiar(`Entra na minha sala "${sala.nome}" no simulador da BraSúmula:`, linkConvite, 'Convite copiado! É só colar no grupo.')
               }
             >
               Copiar convite · {sala.participantes.length}/{MAXIMO}
             </BotaoPrincipal>
+          )}
+          {eu && minha && (
+            <>
+              <button
+                type="button"
+                title="Copia um link só seu, para usar a sala como você no celular ou em outro computador"
+                className={BOTAO_SECUNDARIO}
+                onClick={() =>
+                  copiar(
+                    'Meu link pessoal da sala',
+                    `${linkConvite}#chave=${minha.chave}`,
+                    'Link pessoal copiado. Abra no seu outro aparelho e não mande para ninguém: quem tiver esse link mexe nos seus palpites.',
+                  )
+                }
+              >
+                <span className="sm:hidden">Outro aparelho</span>
+                <span className="hidden sm:inline">Abrir em outro aparelho</span>
+              </button>
+              <button type="button" className={`${BOTAO_SECUNDARIO} text-vermelho`} onClick={sair}>
+                Sair da sala
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -420,26 +443,6 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                 { valor: 'comparar', rotulo: 'Comparar tabelas' },
               ]}
             />
-            {eu && minha && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
-                <button
-                  type="button"
-                  className="cursor-pointer text-texto-2 hover:text-texto"
-                  onClick={() =>
-                    copiar(
-                      'Meu link pessoal da sala',
-                      `${linkConvite}#chave=${minha.chave}`,
-                      'Link pessoal copiado. Abra no seu outro aparelho e não mande para ninguém: quem tiver esse link mexe nos seus palpites.',
-                    )
-                  }
-                >
-                  Abrir em outro aparelho
-                </button>
-                <button type="button" className="cursor-pointer text-vermelho hover:underline" onClick={sair}>
-                  Sair da sala
-                </button>
-              </div>
-            )}
             {!eu && (
               <p className="text-sm text-texto-2">
                 Você está só olhando.{' '}
@@ -482,25 +485,14 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                     >
                       Limpar
                     </button>
-                    <span aria-live="polite" className="font-mono text-sm font-bold">
-                      {erroAoSalvar ? (
-                        <span className="text-vermelho">Não salvou ({erroAoSalvar}). Tentando de novo…</span>
-                      ) : pendente ? (
-                        <span className="text-texto-2">Salvando…</span>
-                      ) : (
-                        <span className="text-verde">
-                          Salvo na sala ✓
-                          {pelaMetade > 0 && (
-                            <span className="text-texto-2">
-                              {' '}
-                              · {pelaMetade === 1 ? 'falta' : 'faltam'} o outro lado de {pelaMetade}{' '}
-                              {pelaMetade === 1 ? 'placar' : 'placares'}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </span>
+                    <EstadoGravacao estado={erroAoSalvar ? 'erro' : pendente ? 'salvando' : 'salvo'} erro={erroAoSalvar} />
                   </div>
+                )}
+                {ehEu && pelaMetade > 0 && (
+                  <p className="mt-2.5 text-[13px] text-texto-2">
+                    {pelaMetade === 1 ? '1 placar está' : `${pelaMetade} placares estão`} com um lado só. Ele só conta (e só vai
+                    para a sala) quando os dois lados estiverem preenchidos.
+                  </p>
                 )}
 
                 <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -587,6 +579,37 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
         </>
       )}
     </Pagina>
+  )
+}
+
+const BOTAO_SECUNDARIO =
+  'cursor-pointer border-2 border-texto bg-superficie px-[18px] py-3 text-sm font-extrabold transition-[transform,box-shadow] duration-75 hover:shadow-[3px_3px_0_var(--texto)] active:translate-x-px active:translate-y-px active:shadow-none'
+
+/** Se os meus palpites já estão na sala: girando enquanto grava, verde quando gravou, vermelho se falhou. */
+function EstadoGravacao({ estado, erro }: { estado: 'salvando' | 'salvo' | 'erro'; erro: string | null }) {
+  return (
+    <span
+      role="status"
+      className={`inline-flex items-center gap-2 border-2 px-3.5 py-[11px] font-mono text-xs font-extrabold tracking-[1px] uppercase sm:ml-auto ${
+        estado === 'erro' ? 'border-vermelho text-vermelho' : estado === 'salvo' ? 'border-verde text-verde' : 'border-borda text-texto-2'
+      }`}
+    >
+      {estado === 'salvando' && <span aria-hidden className="size-3.5 flex-none animate-spin border-2 border-borda border-t-lima" />}
+      {estado === 'salvo' && (
+        <span aria-hidden className="grid size-4 flex-none place-items-center bg-verde">
+          <svg viewBox="0 0 12 12" className="size-2.5" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="square">
+            <path d="M2 6.5 5 9l5-6" />
+          </svg>
+        </span>
+      )}
+      {estado === 'erro' && (
+        <span aria-hidden className="grid size-4 flex-none place-items-center bg-vermelho text-[11px] text-white">
+          !
+        </span>
+      )}
+      {estado === 'salvando' ? 'Salvando…' : estado === 'salvo' ? 'Salvo na sala' : 'Não salvou, tentando de novo'}
+      {estado === 'erro' && erro && <span className="sr-only">: {erro}</span>}
+    </span>
   )
 }
 

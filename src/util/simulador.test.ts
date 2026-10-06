@@ -68,6 +68,27 @@ describe('simulador', () => {
     expect(rodadaInicial([partida(1, 1, [1, 0]), partida(2, 2, [0, 0])])).toBe(2)
   })
 
+  it('abre na rodada atual, sem voltar para um jogo atrasado de rodada antiga', () => {
+    const jogos = [
+      // rodada 21: um jogo atrasado
+      partida(1, 21, [1, 0]),
+      partida(2, 21),
+      // rodada 22 inteira disputada
+      partida(3, 22, [2, 2]),
+      partida(4, 22, [0, 1]),
+      // rodada 23: um jogo já foi, o outro é na segunda
+      partida(5, 23, [3, 1]),
+      partida(6, 23),
+      // rodada 24 ainda não começou (um jogo antecipado não conta)
+      partida(7, 24, [1, 1]),
+      partida(8, 24),
+      partida(9, 24),
+    ]
+    expect(rodadaInicial(jogos)).toBe(23)
+    // Terminada a 23, a atual passa a ser a 24, e o jogo atrasado da 21 continua sem puxar para trás.
+    expect(rodadaInicial(jogos.map((p) => (p.id === 6 ? partida(6, 23, [0, 0]) : p)))).toBe(24)
+  })
+
   it('descarta palpites salvos com formato inválido', () => {
     const salvo = JSON.stringify({ 1: { mandante: 2, visitante: null }, 2: { mandante: 'x' }, 3: 'lixo', 4: { mandante: 50, visitante: 1 } })
     expect(lerPalpitesSalvos(salvo)).toEqual({ 1: { mandante: 2, visitante: null } })

@@ -50,11 +50,23 @@ export function preencherComPalpitesDaSumula(
   return novos
 }
 
-/** Rodada para abrir o simulador: a primeira que ainda tem jogo por palpitar. */
+/**
+ * Rodada para abrir o simulador: a rodada atual, que é a primeira com jogo por palpitar cuja rodada seguinte ainda
+ * não está mais da metade disputada. Assim um jogo atrasado (ex.: um adiado da rodada 21 quando já se joga a 29)
+ * não puxa a tela para trás, e uma rodada com jogos ainda na segunda-feira continua sendo a atual.
+ */
 export function rodadaInicial(partidas: Partida[]) {
-  const pendentes = partidas.filter(podePalpitar).map((p) => p.rodada)
-  if (pendentes.length > 0) return Math.min(...pendentes)
-  return Math.max(1, ...partidas.map((p) => p.rodada))
+  const rodadas = [...new Set(partidas.map((p) => p.rodada))].sort((a, b) => a - b)
+  const daRodada = (r: number) => partidas.filter((p) => p.rodada === r && p.status !== 'cancelada')
+  const comPendentes = rodadas.filter((r) => daRodada(r).some(podePalpitar))
+
+  const atual = comPendentes.find((r) => {
+    const seguinte = rodadas[rodadas.indexOf(r) + 1]
+    if (seguinte === undefined) return true
+    const jogos = daRodada(seguinte)
+    return jogos.filter((p) => p.temResultado).length * 2 <= jogos.length
+  })
+  return atual ?? comPendentes[0] ?? Math.max(1, ...rodadas)
 }
 
 /** Lê palpites salvos, descartando o que não tiver o formato esperado. */
