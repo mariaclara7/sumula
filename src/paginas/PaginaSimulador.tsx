@@ -4,6 +4,7 @@ import { usePalpites, usePartidas, useTimes } from '../api/consultas'
 import type { LinhaClassificacao, Palpite, Partida, Time } from '../api/tipos'
 import { BarraPalpite } from '../componentes/BarraPalpite'
 import { Escudo } from '../componentes/Escudo'
+import { useConfirmacao } from '../componentes/useConfirmacao'
 import { BotaoPrincipal, Carregando, Erro, Vazio } from '../componentes/Estado'
 import { LegendaZonas } from '../componentes/LegendaZonas'
 import { Pagina } from '../componentes/Pagina'
@@ -70,6 +71,7 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
   const [busca, setBusca] = useSearchParams()
   const [meusPalpites, setPalpites] = useState<PalpitesUsuario>(() => lerPalpitesSalvos(lerArmazenado(CHAVE_PALPITES)))
   const [aviso, setAviso] = useState<string | null>(null)
+  const [confirmar, janelaConfirmacao] = useConfirmacao()
 
   useEffect(() => {
     gravarArmazenado(CHAVE_PALPITES, Object.keys(meusPalpites).length === 0 ? null : JSON.stringify(meusPalpites))
@@ -108,10 +110,19 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
     )
   }
 
-  function usarCompartilhados() {
+  async function usarCompartilhados() {
     if (!compartilhados) return
     const temMeus = Object.keys(meusPalpites).length > 0
-    if (temMeus && !window.confirm('Isso substitui os seus palpites por os desta simulação. Continuar?')) return
+    if (
+      temMeus &&
+      !(await confirmar({
+        titulo: 'Trocar seus palpites?',
+        texto: 'Os palpites que você já fez aqui vão ser substituídos pelos desta simulação.',
+        confirmar: 'Usar estes palpites',
+        perigo: true,
+      }))
+    )
+      return
     setPalpites(compartilhados)
     sairDoCompartilhado()
   }
@@ -164,8 +175,15 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
     })
   }
 
-  function limpar() {
-    if (window.confirm('Apagar todos os seus palpites?')) setPalpites({})
+  async function limpar() {
+    const total = Object.keys(meusPalpites).length
+    const apagar = await confirmar({
+      titulo: 'Apagar seus palpites?',
+      texto: `${total === 1 ? 'O palpite que você fez vai' : `Os ${total} palpites que você fez vão`} ser apagados deste navegador. Não dá para desfazer.`,
+      confirmar: 'Apagar palpites',
+      perigo: true,
+    })
+    if (apagar) setPalpites({})
   }
 
   useEffect(() => {
@@ -187,6 +205,7 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
 
   return (
     <Pagina className="pt-9 pb-12">
+      {janelaConfirmacao}
       <TituloPagina>Simulador</TituloPagina>
       <p className="mt-[18px] max-w-[720px] text-[15px] leading-[1.55] text-pretty text-texto-2">
         Os jogos que já aconteceram estão travados. Dê seu palpite nos que faltam e veja a tabela mudar na hora. Os
