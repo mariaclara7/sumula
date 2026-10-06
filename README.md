@@ -11,6 +11,8 @@ Os dados vêm da [api-sumula](https://github.com/mariaclara7/api-sumula).
 |---|---|
 | `/` | Topo com dois carrosséis: à esquerda, um card que gira entre líder, vice, 3º, quem está "em chamas" (3+ vitórias seguidas, com brasas), "em choque" (3+ derrotas seguidas, com raios) e o lanterna; à direita, as últimas notícias, uma por vez, geradas a partir dos dados (regras em `src/util/noticias.ts`). Embaixo, a classificação com filtros de turno (geral, 1º, 2º), mando (todos, casa, fora) e tempo de jogo (jogo todo, só o 1º tempo, só o 2º tempo), zonas de Libertadores/rebaixamento, nota OVR e forma recente. Ao trocar o filtro, as linhas deslizam para a nova posição e mostram ▲▼ em relação à tabela normal. Os filtros ficam na URL, então dá para compartilhar o link. |
 | `/simulador?rodada=:n` | Simulador no estilo do GE: jogos disputados travados, palpite nos que faltam e a tabela recalculada a cada placar, com ▲▼ em relação à tabela de verdade. Botões para preencher com o palpite da Súmula e para limpar. Os palpites ficam salvos no navegador (`localStorage`). O botão "Compartilhar simulação" gera um link com os palpites dentro (`?p=`, veja `src/util/compartilhar.ts`); quem abre vê a simulação travada e pode copiá-la para os próprios palpites. A tabela é calculada no navegador (`src/util/classificacao.ts`) com os mesmos critérios de desempate da API. |
+| `/sala` | Salas do simulador: criar uma sala (nome da sala e o seu nome), entrar com um código e voltar para as salas em que você já está. |
+| `/sala/:codigo` | A sala: até 5 pessoas, cada uma com uma cor. Cada um palpita só nos próprios jogos (grava sozinho na sala), vê os palpites e a tabela final dos outros sem poder mexer, e na aba "Comparar tabelas" vê a posição final que cada um previu para cada time. Quem abre o link sem estar na sala escolhe um nome para entrar (ou só olha). "Abrir em outro aparelho" copia um link pessoal (`#chave=`) para usar a sala como a mesma pessoa no celular. Quem criou a sala pode remover alguém. |
 | `/chances` | Chance de cada time ser campeão, ir para a Libertadores, Pré-Libertadores, Sul-Americana ou cair, a partir de 10.000 simulações dos jogos restantes feitas pela API. Embaixo, "A matemática": o que já está decidido (Campeão, Rebaixado, Garantido...) e quantos pontos garantem título e permanência. |
 | `/estatisticas` | Resumo da liga (gols por jogo, vitórias de mandante e visitante, +2,5 gols, ambos marcam), destaques de sequências e tabelas ordenáveis de gols e sequências por time. |
 | `/evolucao?times=:id,:id&medida=pontos` | Posição ou pontos rodada a rodada de até 5 times no mesmo gráfico. Sem escolha, mostra os 4 primeiros. Cada time fica com a mesma cor enquanto estiver selecionado, mesmo se outro sair. |
@@ -62,17 +64,23 @@ O favicon é `public/favicon.svg`, com versões em PNG para navegadores sem SVG 
 
 ## Publicação
 
-O site e os dados ficam na **Cloudflare**, em dois Workers só com arquivos estáticos (grátis e sem limite de
-visitas para arquivos estáticos):
+O site e os dados ficam na **Cloudflare**, em dois Workers (grátis e sem limite de visitas para arquivos
+estáticos):
 
 | Worker | O que tem | Quem publica |
 |---|---|---|
-| `sumula` | o site (pasta `dist/`, veja `wrangler.jsonc`) | workflow **Publicar** deste repositório, a cada push na `main` |
+| `sumula` | o site (pasta `dist/`) e a API das salas em `/api/salas` (`worker/`), com o banco D1 `sumula-salas`; veja `wrangler.jsonc` | workflow **Publicar** deste repositório, a cada push na `main` |
 | `sumula-dados` | a "API pré-calculada": um `.json` para cada endereço que o site usa | workflow **Coletor** da [api-sumula](https://github.com/mariaclara7/api-sumula), a cada 3 horas |
 
 Em produção o site é gerado com `VITE_API_ESTATICA=true`: em vez de chamar a API ao vivo, lê os arquivos
 (`src/api/rotas.ts` monta o nome de cada um). Não há banco em produção: a coleta usa um Postgres descartável
 que só existe durante o workflow.
+
+A única coisa guardada de verdade são as **salas do simulador**, no banco D1 `sumula-salas` (grátis até
+5 milhões de leituras e 100 mil gravações por dia). As tabelas ficam em `migrations/`; o **Publicar** aplica as
+migrações novas antes de cada publicação. O banco guarda só o nome da sala, o nome de cada pessoa, os palpites
+(no mesmo formato do link de compartilhar) e o SHA-256 da chave secreta de cada um. Salas sem nenhuma mudança por
+60 dias são apagadas por uma tarefa diária (`triggers.crons`).
 
 ### Passo a passo
 
@@ -81,8 +89,11 @@ que só existe durante o workflow.
 - **Cloudflare** ([dash.cloudflare.com](https://dash.cloudflare.com)): crie a conta e abra uma vez
   *Workers & Pages*, para a Cloudflare criar o seu endereço `*.workers.dev`. Depois:
   - copie o **Account ID** (aparece na lateral de *Workers & Pages*);
-  - em *My Profile → API Tokens → Create Token*, use o modelo **Edit Cloudflare Workers**, escolha a sua conta e
-    crie. Copie o token (ele só aparece uma vez).
+  - em *My Profile → API Tokens → Create Token*, use o modelo **Edit Cloudflare Workers**, escolha a sua conta,
+    acrescente a permissão **Account → D1 → Edit** (para o banco das salas) e crie. Copie o token (ele só aparece
+    uma vez);
+  - em *Storage & Databases → D1 → Create*, crie o banco `sumula-salas` e coloque o **Database ID** dele em
+    `d1_databases` no `wrangler.jsonc`.
 
 **2. Secrets no GitHub** (*Settings → Secrets and variables → Actions → New repository secret*)
 
@@ -120,7 +131,12 @@ que só existe durante o workflow.
 Exportacao__Saida=publicacao/saida dotnet run --project src/Sumula.Exportador
 cd publicacao && npx wrangler dev --port 8787
 
-# aqui: gera o site em modo estático e sobe o Worker do site
+# aqui: gera o site em modo estático e sobe o Worker do site (com um D1 local para as salas)
 VITE_API_URL=http://127.0.0.1:8787 VITE_API_ESTATICA=true npm run build
+npx wrangler d1 migrations apply sumula-salas --local
 npx wrangler dev --port 8788   # http://127.0.0.1:8788
 ```
+
+Para mexer nas salas com o `npm run dev`, deixe o Worker rodando na porta 8787 (`npx wrangler d1 migrations apply
+sumula-salas --local` e `npx wrangler dev --port 8787`): o Vite manda `/api/salas` para ele e o resto de `/api`
+para a api-sumula.

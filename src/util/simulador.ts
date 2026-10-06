@@ -1,4 +1,6 @@
 import type { Palpite, Partida } from '../api/tipos'
+import { COMPETICAO, TEMPORADA } from '../config'
+import { lerArmazenado } from '../preferencias'
 import type { JogoComPlacar } from './classificacao'
 
 /** Placar digitado no simulador; um lado vazio fica null e o jogo ainda não conta na tabela. */
@@ -75,4 +77,12 @@ export function lerPalpitesSalvos(texto: string | null): PalpitesUsuario {
   } catch {
     return {}
   }
+}
+
+/** Onde o Simulador guarda os palpites neste navegador. */
+export const CHAVE_PALPITES = `sumula:simulador:${COMPETICAO}:${TEMPORADA}`
+
+/** Os palpites salvos no Simulador (para levar para uma sala). */
+export function palpitesDoSimulador() {
+  return lerPalpitesSalvos(lerArmazenado(CHAVE_PALPITES))
 }

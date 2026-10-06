@@ -1,22 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { usePalpites, usePartidas, useTimes } from '../api/consultas'
-import type { LinhaClassificacao, Palpite, Partida, Time } from '../api/tipos'
-import { BarraPalpite } from '../componentes/BarraPalpite'
-import { Escudo } from '../componentes/Escudo'
-import { useConfirmacao } from '../componentes/useConfirmacao'
+import type { Palpite, Partida, Time } from '../api/tipos'
 import { BotaoPrincipal, Carregando, Erro, Vazio } from '../componentes/Estado'
-import { LegendaZonas } from '../componentes/LegendaZonas'
 import { Pagina } from '../componentes/Pagina'
-import { Seletor } from '../componentes/Seletor'
+import { JogoDoSimulador, NavegacaoRodadas, TabelaSimulada } from '../componentes/Simulacao'
 import { TituloPagina } from '../componentes/TituloPagina'
-import { useDeslizar } from '../componentes/useDeslizar'
-import { COMPETICAO, TEMPORADA, ZONAS, zonaDaPosicao } from '../config'
-import { gravarArmazenado, lerArmazenado, usePreferencias } from '../preferencias'
+import { useConfirmacao } from '../componentes/useConfirmacao'
+import { ZONAS } from '../config'
+import { gravarArmazenado, lerArmazenado } from '../preferencias'
 import { calcularClassificacao } from '../util/classificacao'
 import { codificarPalpites, decodificarPalpites, resumoDaSimulacao } from '../util/compartilhar'
-import { formatarDataPartida, formatarSaldo } from '../util/formato'
 import {
+  CHAVE_PALPITES,
   jogosDaSimulacao,
   lerGols,
   lerPalpitesSalvos,
@@ -27,7 +23,6 @@ import {
   type PlacarDigitado,
 } from '../util/simulador'
 
-const CHAVE_PALPITES = `sumula:simulador:${COMPETICAO}:${TEMPORADA}`
 const zonaRebaixamento = ZONAS.find((z) => z.nome === 'Rebaixamento')!
 const QUANTIDADE_REBAIXADOS = zonaRebaixamento.ate - zonaRebaixamento.de + 1
 
@@ -201,8 +196,6 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
     if (!palpitado) pendentesPorRodada.set(p.rodada, (pendentesPorRodada.get(p.rodada) ?? 0) + 1)
   }
 
-  const indice = rodadas.indexOf(rodada)
-
   return (
     <Pagina className="pt-9 pb-12">
       {janelaConfirmacao}
@@ -269,6 +262,12 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
           >
             Compartilhar simulação
           </button>
+          <Link
+            to="/sala"
+            className="border-2 border-texto bg-superficie px-[18px] py-3 text-sm font-extrabold text-texto hover:text-texto"
+          >
+            Simular com amigos
+          </Link>
           <span className="font-mono text-sm font-bold tabular-nums" aria-live="polite">
             {palpitados.length} de {restantes.length} jogos palpitados
           </span>
@@ -282,40 +281,12 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
 
       <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <section aria-label="Jogos da rodada">
-          <div className="flex items-center gap-2 border-2 border-texto bg-superficie p-1.5">
-            <BotaoRodada
-              rotulo="Rodada anterior"
-              desabilitado={indice <= 0}
-              onClick={() => irPara(rodadas[indice - 1])}
-            >
-              ◀
-            </BotaoRodada>
-            <div className="flex flex-1 justify-center">
-              <Seletor
-                rotulo="Escolher a rodada"
-                valor={rodada}
-                aoMudar={irPara}
-                opcoes={rodadas.map((r) => ({
-                  valor: r,
-                  rotulo: `Rodada ${r}`,
-                  detalhe: pendentesPorRodada.get(r) ? `${pendentesPorRodada.get(r)} sem palpite` : undefined,
-                }))}
-                className="flex items-center gap-2 px-3 py-1 text-lg font-black hover:text-destaque focus-visible:bg-lima focus-visible:text-grafite focus-visible:outline-none"
-              >
-                Rodada {rodada}
-                <span aria-hidden className="text-xs">
-                  ▼
-                </span>
-              </Seletor>
-            </div>
-            <BotaoRodada
-              rotulo="Próxima rodada"
-              desabilitado={indice >= rodadas.length - 1}
-              onClick={() => irPara(rodadas[indice + 1])}
-            >
-              ▶
-            </BotaoRodada>
-          </div>
+          <NavegacaoRodadas
+            rodadas={rodadas}
+            rodada={rodada}
+            aoMudar={irPara}
+            detalhe={(r) => (pendentesPorRodada.get(r) ? `${pendentesPorRodada.get(r)} sem palpite` : undefined)}
+          />
           <div className="mt-2 flex items-center justify-between gap-3 text-[13px]">
             <span className="font-mono font-bold text-texto-2">
               {pendentesPorRodada.get(rodada)
@@ -365,230 +336,3 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
   )
 }
 
-function BotaoRodada({
-  rotulo,
-  desabilitado,
-  onClick,
-  children,
-}: {
-  rotulo: string
-  desabilitado: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={rotulo}
-      disabled={desabilitado}
-      onClick={onClick}
-      className="grid size-10 cursor-pointer place-items-center bg-texto text-sm text-texto-invertido transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
-    >
-      {children}
-    </button>
-  )
-}
-
-type PropsJogo = {
-  partida: Partida
-  mandante: Time
-  visitante: Time
-  palpite: PlacarDigitado | undefined
-  sugestao: Palpite | undefined
-  /** Simulação compartilhada: mostra os placares sem deixar editar. */
-  somenteLeitura: boolean
-  aoAlterar: (lado: keyof PlacarDigitado, texto: string) => void
-}
-
-const ESTADO: Partial<Record<Partida['status'], string>> = {
-  adiada: 'Adiado',
-  cancelada: 'Cancelado',
-  emAndamento: 'Ao vivo',
-}
-
-function JogoDoSimulador({ partida, mandante, visitante, palpite, sugestao, somenteLeitura, aoAlterar }: PropsJogo) {
-  const editavel = podePalpitar(partida) && !somenteLeitura
-  const palpitado = podePalpitar(partida) && palpite?.mandante != null && palpite.visitante != null
-  const encerrado = partida.temResultado
-
-  return (
-    <li
-      className={`border-2 px-3 py-2.5 ${editavel || palpitado ? 'border-texto bg-superficie' : 'border-borda bg-superficie-2'}`}
-    >
-      <div className="flex justify-between font-mono text-[11px] font-bold text-texto-2">
-        <span>{formatarDataPartida(partida.data)}</span>
-        <span>
-          {encerrado
-            ? '🔒 Encerrado'
-            : (ESTADO[partida.status] ?? (somenteLeitura ? 'Palpite compartilhado' : 'Seu palpite'))}
-        </span>
-      </div>
-      <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-        <div className="flex min-w-0 items-center justify-end gap-2 text-right">
-          <NomeTime time={mandante} />
-          <Escudo time={mandante} tamanho={24} />
-        </div>
-        <div className="flex items-center gap-1.5">
-          {editavel ? (
-            <>
-              <CampoGols
-                time={mandante}
-                valor={palpite?.mandante ?? null}
-                aoAlterar={(t) => aoAlterar('mandante', t)}
-              />
-              <span aria-hidden className="font-black text-texto-2">
-                ×
-              </span>
-              <CampoGols
-                time={visitante}
-                valor={palpite?.visitante ?? null}
-                aoAlterar={(t) => aoAlterar('visitante', t)}
-              />
-            </>
-          ) : (
-            <span className="min-w-[88px] bg-texto px-2 py-2 text-center font-mono text-base font-extrabold text-texto-invertido tabular-nums">
-              {encerrado
-                ? `${partida.golsMandante} × ${partida.golsVisitante}`
-                : palpitado
-                  ? `${palpite!.mandante} × ${palpite!.visitante}`
-                  : '—'}
-            </span>
-          )}
-        </div>
-        <div className="flex min-w-0 items-center gap-2">
-          <Escudo time={visitante} tamanho={24} />
-          <NomeTime time={visitante} />
-        </div>
-      </div>
-      {editavel && sugestao && <BarraPalpite palpite={sugestao} mandante={mandante} visitante={visitante} />}
-    </li>
-  )
-}
-
-/** No celular os campos de placar ocupam o meio: fica a sigla, com o nome completo para leitores de tela. */
-function NomeTime({ time }: { time: Time }) {
-  return (
-    <span className="truncate text-sm font-bold" title={time.nomeCurto}>
-      <span aria-hidden className="sm:hidden">
-        {time.sigla}
-      </span>
-      <span className="sr-only sm:not-sr-only">{time.nomeCurto}</span>
-    </span>
-  )
-}
-
-function CampoGols({
-  time,
-  valor,
-  aoAlterar,
-}: {
-  time: Time
-  valor: number | null
-  aoAlterar: (texto: string) => void
-}) {
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      maxLength={2}
-      value={valor ?? ''}
-      onChange={(evento) => aoAlterar(evento.target.value)}
-      onFocus={(evento) => evento.target.select()}
-      aria-label={`Gols do ${time.nomeCurto}`}
-      className="size-10 border-2 border-texto bg-fundo text-center font-mono text-lg font-extrabold tabular-nums focus:bg-lima focus:text-grafite focus:outline-none"
-    />
-  )
-}
-
-const COLUNAS = 'grid grid-cols-[40px_minmax(0,1fr)_40px_36px_36px_44px]'
-
-function TabelaSimulada({ linhas, posicaoReal }: { linhas: LinhaClassificacao[]; posicaoReal: Map<number, number> }) {
-  const { meuTime } = usePreferencias()
-  const corpo = useRef<HTMLDivElement>(null)
-  useDeslizar(corpo, linhas.map((l) => l.time.id).join(), 500)
-
-  return (
-    <div className="border-2 border-texto bg-superficie">
-      <div role="table" aria-label="Classificação simulada">
-        <div
-          role="row"
-          className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}
-        >
-          <span role="columnheader">#</span>
-          <span role="columnheader" className="text-left">
-            TIME
-          </span>
-          <span role="columnheader">
-            <abbr title="Pontos" className="no-underline">
-              P
-            </abbr>
-          </span>
-          <span role="columnheader">
-            <abbr title="Jogos" className="no-underline">
-              J
-            </abbr>
-          </span>
-          <span role="columnheader">
-            <abbr title="Vitórias" className="no-underline">
-              V
-            </abbr>
-          </span>
-          <span role="columnheader">
-            <abbr title="Saldo de gols" className="no-underline">
-              SG
-            </abbr>
-          </span>
-        </div>
-        <div ref={corpo} role="rowgroup">
-          {linhas.map((linha) => {
-            const zona = zonaDaPosicao(linha.posicao)
-            const variacao = (posicaoReal.get(linha.time.id) ?? linha.posicao) - linha.posicao
-            return (
-              <div
-                key={linha.time.id}
-                role="row"
-                data-deslizar={linha.time.id}
-                className={`${COLUNAS} h-10 items-center border-b border-borda text-center last:border-b-0 ${
-                  meuTime === linha.time.id ? 'bg-realce' : 'bg-superficie'
-                }`}
-              >
-                <div role="cell" className="flex h-full items-center gap-2">
-                  <span title={zona?.nome} className={`h-full w-1 ${zona?.cor ?? 'bg-transparent'}`} />
-                  <span className="text-base font-black">{linha.posicao}</span>
-                </div>
-                <div role="cell" className="flex min-w-0 items-center gap-2 text-left">
-                  <Escudo time={linha.time} tamanho={22} />
-                  <span className="truncate text-sm font-bold">{linha.time.nomeCurto}</span>
-                  {variacao !== 0 && (
-                    <span
-                      title={`${variacao > 0 ? 'Sobe' : 'Cai'} ${Math.abs(variacao)} em relação à tabela de verdade`}
-                      className={`font-mono text-[11px] font-extrabold whitespace-nowrap ${variacao > 0 ? 'text-verde' : 'text-vermelho'}`}
-                    >
-                      {variacao > 0 ? `▲${variacao}` : `▼${-variacao}`}
-                    </span>
-                  )}
-                </div>
-                <span role="cell" className="text-base font-black tabular-nums">
-                  {linha.pontos}
-                </span>
-                <span role="cell" className="font-mono text-[13px] text-texto-2 tabular-nums">
-                  {linha.jogos}
-                </span>
-                <span role="cell" className="font-mono text-[13px] tabular-nums">
-                  {linha.vitorias}
-                </span>
-                <span role="cell" className="font-mono text-[13px] tabular-nums">
-                  {formatarSaldo(linha.saldo)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      <div className="border-t border-borda px-3 pb-3">
-        <LegendaZonas className="mt-3" />
-      </div>
-    </div>
-  )
-}

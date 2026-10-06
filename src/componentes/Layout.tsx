@@ -12,6 +12,7 @@ import { Seletor } from './Seletor'
 const LINKS = [
   { para: '/', rotulo: 'Classificação' },
   { para: '/simulador', rotulo: 'Simulador' },
+  { para: '/sala', rotulo: 'Sala' },
   { para: '/chances', rotulo: 'Chances' },
   { para: '/estatisticas', rotulo: 'Estatísticas' },
   { para: '/evolucao', rotulo: 'Evolução' },
@@ -49,7 +50,8 @@ export function Layout() {
               <NavLink
                 key={link.para}
                 to={link.para}
-                end
+                // /sala fica marcado também dentro de uma sala (/sala/K7P-2QX).
+                end={link.para !== '/sala'}
                 className={({ isActive }) =>
                   `inclinado flex-none px-3.5 py-2 text-sm font-bold transition-[background-color,color,transform] duration-200 hover:-translate-y-px ${
                     isActive ? 'bg-lima text-grafite hover:text-grafite' : 'text-cinza hover:text-creme'

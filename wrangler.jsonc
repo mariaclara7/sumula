@@ -1,12 +1,28 @@
-// O site na Cloudflare: um Worker só com os arquivos do build (dist/).
+// O site na Cloudflare: o Worker "sumula", com os arquivos do build (dist/) e a API das salas (worker/).
 // Publicado pelo workflow "Publicar" a cada push na main (npx wrangler deploy).
 {
   "name": "sumula",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-09-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // Rotas como /times/123 ou /simulador entregam o index.html e o React Router assume.
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // Só /api/* passa pelo código do Worker; o resto sai direto dos arquivos (e não conta no limite do plano grátis).
+    "run_worker_first": ["/api/*"]
+  },
+  // Banco das salas do simulador. As tabelas vêm de migrations/ (o Publicar aplica antes de publicar).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sumula-salas",
+      "database_id": "ID_DO_BANCO"
+    }
+  ],
+  // Uma vez por dia, apaga as salas paradas há mais de 60 dias.
+  "triggers": {
+    "crons": ["23 6 * * *"]
   },
   // O site fica em brasumula.com.br e www.brasumula.com.br. A Cloudflare cria o DNS e o certificado sozinha.
   "routes": [
