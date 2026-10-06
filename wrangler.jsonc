@@ -17,7 +17,7 @@
     {
       "binding": "DB",
       "database_name": "sumula-salas",
-      "database_id": "ID_DO_BANCO"
+      "database_id": "f5e39e98-4d1a-496c-81c5-691ea6808f98"
     }
   ],
   // Uma vez por dia, apaga as salas paradas há mais de 60 dias.
