@@ -13,10 +13,11 @@ import { MatrizIntervalo } from '../componentes/MatrizIntervalo'
 import { NumerosDoTime } from '../componentes/NumerosDoTime'
 import { Pagina } from '../componentes/Pagina'
 import { Rotulo } from '../componentes/TituloPagina'
+import { ValorChance } from '../componentes/ValorChance'
 import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
 import { contar, useAnimacao } from '../util/animacao'
 import { coresDoTime } from '../util/cores'
-import { formatarChance, formatarPercentual, formatarSaldo } from '../util/formato'
+import { formatarPercentual, formatarSaldo } from '../util/formato'
 import { faixaDaNota, notaDoTime } from '../util/notas'
 
 // Cor da barra de cada faixa; a do título usa a cor do texto, como no design.
@@ -193,7 +194,9 @@ function ChancesDoTime({ timeId, nomeTime, progresso }: { timeId: number; nomeTi
               return (
                 <div key={faixa.nome}>
                   <dt className="text-xs text-texto-2">{faixa.nome}</dt>
-                  <dd className="mt-0.5 mb-1.5 text-[26px] font-black">{formatarChance(chance)}</dd>
+                  <dd className="mt-0.5 mb-1.5 text-[26px] font-black whitespace-nowrap">
+                    <ValorChance chance={chance} tamanho="text-[13px]" />
+                  </dd>
                   <dd className="h-1.5 bg-superficie-2">
                     {chance > 0 && (
                       <div

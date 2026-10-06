@@ -35,7 +35,7 @@ export function GraficoPosicoesFinais({ posicoes, nomeTime, progresso = 1 }: Pro
                 title={`${indice + 1}º lugar: ${formatarChance(chance)}`}
                 className="flex h-full flex-col items-center justify-end gap-1"
               >
-                <span className="font-mono text-[10px] font-extrabold">
+                <span className="font-mono text-[10px] font-extrabold whitespace-nowrap">
                   {indice === maisProvavel ? formatarChance(chance) : ''}
                 </span>
                 <div

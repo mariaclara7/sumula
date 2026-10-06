@@ -2,7 +2,7 @@ import type { Resultado } from '../api/tipos'
 import { NOME_RESULTADO, SIGLA_RESULTADO } from '../util/formato'
 
 const COR: Record<Resultado, string> = {
-  vitoria: 'bg-grafite text-lima',
+  vitoria: 'bg-lima text-grafite',
   empate: 'bg-[#d9d7cf] text-grafite',
   derrota: 'bg-vermelho text-white',
 }

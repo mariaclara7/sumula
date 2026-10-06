@@ -2,9 +2,11 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { contar, movimentoReduzido, useAnimacao } from '../util/animacao'
 import { coresDoTime } from '../util/cores'
+import { partesDaChance } from '../util/formato'
 import { Confete } from './Confete'
 import type { CardDestaque } from '../util/destaques'
 import { useRotacao } from './useRotacao'
+import { ValorChance } from './ValorChance'
 
 const DURACAO = 6000
 const LIMA = '#c6f432'
@@ -213,8 +215,12 @@ function Anel({ valor, rotulo, cor, progresso }: { valor: number | null; rotulo:
       style={{ background: `conic-gradient(${cor} ${graus}deg, #2b2b2b 0)` }}
     >
       <div className="flex size-[82px] flex-col items-center justify-center rounded-full bg-grafite text-center">
-        <span className="text-2xl font-black tabular-nums">
-          {textoDaChance(valor, progresso)}
+        <span className="text-2xl leading-none font-black tabular-nums">
+          {valor !== null && partesDaChance(valor).qualificador ? (
+            <ValorChance chance={valor} empilhado tamanho="text-[10px]" />
+          ) : (
+            textoDaChance(valor, progresso)
+          )}
         </span>
         <span className="text-[10px] leading-tight text-cinza">{rotulo}</span>
       </div>
@@ -222,12 +228,10 @@ function Anel({ valor, rotulo, cor, progresso }: { valor: number | null; rotulo:
   )
 }
 
-/** Como na página de chances: nunca "100%" ou "0%" para o que ainda pode mudar. */
+/** Número que conta junto com a animação; perto de 0% ou 100% quem mostra é o ValorChance, por extenso. */
 function textoDaChance(valor: number | null, progresso: number) {
   if (valor === null) return '—'
   if (valor >= 1) return `${contar(100, progresso)}%`
-  if (valor > 0.995) return '>99%'
-  if (valor > 0 && valor < 0.005) return '<1%'
   return `${contar(valor * 100, progresso)}%`
 }
 

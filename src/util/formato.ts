@@ -39,15 +39,22 @@ export function formatarPercentual(valor: number) {
 }
 
 /**
- * Chance em percentual inteiro. Evita "0%" e "100%" quando o evento ainda é possível,
- * porque arredondar 0,3% para 0% passa a ideia errada de que acabou.
+ * Chance em percentual inteiro, separada em "menos de"/"mais de" e o número, para quem mostra o
+ * qualificador menor. Evita "0%" e "100%" quando o evento ainda é possível, porque arredondar 0,3% para
+ * 0% passa a ideia errada de que acabou. Por extenso, e não "<1%", para qualquer um entender.
  */
+export function partesDaChance(chance: number): { qualificador?: 'menos de' | 'mais de'; numero: string } {
+  if (chance <= 0) return { numero: '—' }
+  if (chance >= 1) return { numero: '100%' }
+  if (chance < 0.005) return { qualificador: 'menos de', numero: '1%' }
+  if (chance > 0.995) return { qualificador: 'mais de', numero: '99%' }
+  return { numero: `${Math.round(chance * 100)}%` }
+}
+
+/** Ex.: "12%", "menos de 1%", "mais de 99%". */
 export function formatarChance(chance: number) {
-  if (chance <= 0) return '—'
-  if (chance >= 1) return '100%'
-  if (chance < 0.005) return '<1%'
-  if (chance > 0.995) return '>99%'
-  return `${Math.round(chance * 100)}%`
+  const { qualificador, numero } = partesDaChance(chance)
+  return qualificador ? `${qualificador} ${numero}` : numero
 }
 
 export const SIGLA_RESULTADO: Record<Resultado, string> = {

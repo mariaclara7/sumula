@@ -1,4 +1,4 @@
-import { formatarChance } from '../util/formato'
+import { ValorChance } from './ValorChance'
 
 type Props = {
   chance: number
@@ -13,9 +13,9 @@ export function BarraChance({ chance, cor, alinhamento = 'direita', progresso = 
   return (
     <div className="flex min-w-10 flex-col gap-[5px]">
       <span
-        className={`font-mono text-[13px] font-bold tabular-nums ${alinhamento === 'direita' ? 'text-right' : 'text-left'}`}
+        className={`font-mono text-[13px] font-bold whitespace-nowrap tabular-nums ${alinhamento === 'direita' ? 'text-right' : 'text-left'}`}
       >
-        {formatarChance(chance)}
+        <ValorChance chance={chance} tamanho="text-[10px]" />
       </span>
       <div className="h-1.5 bg-superficie-2">
         {chance > 0 && <div className={`h-full ${cor}`} style={{ width: `max(${chance * 100 * progresso}%, 2px)` }} />}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useClassificacao, useConfronto, usePalpites, useProbabilidades, useTimes } from '../api/consultas'
 import type { LinhaClassificacao, ProbabilidadesTime, Time } from '../api/tipos'
@@ -8,10 +9,11 @@ import { ListaPartidas } from '../componentes/ListaPartidas'
 import { Pagina } from '../componentes/Pagina'
 import { Seletor } from '../componentes/Seletor'
 import { TituloPagina } from '../componentes/TituloPagina'
+import { ValorChance } from '../componentes/ValorChance'
 import { FAIXAS_CHANCES, chanceNaFaixa } from '../config'
 import { usePreferencias } from '../preferencias'
 import { contar, useAnimacao } from '../util/animacao'
-import { formatarChance, formatarPercentual, formatarSaldo } from '../util/formato'
+import { formatarPercentual, formatarSaldo } from '../util/formato'
 import { notaDoTime } from '../util/notas'
 
 function lerId(valor: string | null) {
@@ -25,7 +27,7 @@ type Disputa = {
   b: number
   /** 1: maior é melhor; -1: menor é melhor. */
   sentido: 1 | -1
-  formatar: (valor: number) => string
+  formatar: (valor: number) => ReactNode
 }
 
 export function PaginaConfronto() {
@@ -164,6 +166,7 @@ function Disputas({ a, b, linha, chances, progresso }: PropsDisputas) {
   if (!la || !lb) return null
 
   const inteiro = (v: number) => String(v)
+  const chancePorExtenso = (v: number) => <ValorChance chance={v} empilhado tamanho="text-[11px]" />
   const disputas: Disputa[] = [
     { rotulo: 'PONTOS', a: la.pontos, b: lb.pontos, sentido: 1, formatar: inteiro },
     { rotulo: 'APROVEITAMENTO', a: la.aproveitamento, b: lb.aproveitamento, sentido: 1, formatar: formatarPercentual },
@@ -191,14 +194,14 @@ function Disputas({ a, b, linha, chances, progresso }: PropsDisputas) {
         a: chanceNaFaixa(ca.posicoes, libertadores),
         b: chanceNaFaixa(cb.posicoes, libertadores),
         sentido: 1,
-        formatar: formatarChance,
+        formatar: chancePorExtenso,
       },
       {
         rotulo: 'RISCO DE REBAIXAMENTO',
         a: chanceNaFaixa(ca.posicoes, rebaixamento),
         b: chanceNaFaixa(cb.posicoes, rebaixamento),
         sentido: -1,
-        formatar: formatarChance,
+        formatar: chancePorExtenso,
       },
     )
   }
