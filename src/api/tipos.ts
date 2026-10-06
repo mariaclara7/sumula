@@ -141,15 +141,6 @@ export type ResultadoTempos = {
   times: DesempenhoPorTempo[]
 }
 
-/** Foto com licença livre (Wikimedia Commons). A licença exige mostrar o autor e a licença junto. */
-export type FotoJogador = {
-  url: string
-  /** Página do arquivo no Commons, com o crédito completo. */
-  pagina: string
-  autor: string | null
-  licenca: string | null
-}
-
 export type Artilheiro = {
   jogadorId: number
   nome: string
@@ -158,8 +149,6 @@ export type Artilheiro = {
   gols: number
   assistencias: number | null
   penaltis: number | null
-  /** Ausente nos dados antigos; null quando o jogador não tem foto livre. */
-  foto?: FotoJogador | null
 }
 
 export type Placar = {
