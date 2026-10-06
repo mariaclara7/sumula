@@ -9,6 +9,7 @@ import { Escudo } from './Escudo'
 import { FormaRecente } from './FormaRecente'
 import { LegendaZonas } from './LegendaZonas'
 import { useDeslizar } from './useDeslizar'
+import { Sigla } from './Sigla'
 
 type Props = {
   linhas: LinhaClassificacao[]
@@ -42,34 +43,36 @@ export function TabelaClassificacao({ linhas, mostrarZonas, posicaoNormal, desta
             className={`${COLUNAS} h-8 items-center border-b-2 border-texto text-center font-mono text-[10px] font-extrabold tracking-[1px] text-texto-2 md:h-9 md:text-[11px]`}
           >
             <span role="columnheader" className="pl-2.5 text-left md:pl-0 md:text-center">
-              <abbr title="Posição" className="no-underline">#</abbr>
+              <Sigla dica="Posição na tabela">#</Sigla>
             </span>
             <span role="columnheader" className="text-left">TIME</span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Nota geral, a partir do aproveitamento" className="no-underline">OVR</abbr>
+              <Sigla dica="Overall: nota do time de 50 a 99, como nos games de futebol, calculada pelo aproveitamento">OVR</Sigla>
             </span>
             <span role="columnheader">
-              <abbr title="Pontos" className="no-underline">PTS</abbr>
+              <Sigla dica="Pontos: 3 por vitória, 1 por empate">PTS</Sigla>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Jogos" className="no-underline">J</abbr>
+              <Sigla dica="Jogos disputados">J</Sigla>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Vitórias, empates e derrotas" className="no-underline">V · E · D</abbr>
+              <Sigla dica="Vitórias, empates e derrotas">V · E · D</Sigla>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Gols pró" className="no-underline">GP</abbr>
+              <Sigla dica="Gols pró: gols que o time marcou">GP</Sigla>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Gols contra" className="no-underline">GC</abbr>
+              <Sigla dica="Gols contra: gols que o time sofreu">GC</Sigla>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Saldo de gols" className="no-underline">SG</abbr>
+              <Sigla dica="Saldo de gols: gols marcados menos gols sofridos">SG</Sigla>
             </span>
             <span role="columnheader" className={`${SO_TABLET} justify-center`}>
-              <abbr title="Aproveitamento" className="no-underline">APROV.</abbr>
+              <Sigla dica="Aproveitamento: porcentagem dos pontos possíveis que o time ganhou">APROV.</Sigla>
             </span>
-            <span role="columnheader">FORMA</span>
+            <span role="columnheader">
+              <Sigla dica="Últimos 5 jogos, do mais antigo ao mais recente: V vitória, E empate, D derrota">FORMA</Sigla>
+            </span>
           </div>
 
           <div ref={corpo} role="rowgroup">

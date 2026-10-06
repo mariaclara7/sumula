@@ -19,6 +19,7 @@ import { contar, useAnimacao } from '../util/animacao'
 import { coresDoTime } from '../util/cores'
 import { formatarPercentual, formatarSaldo } from '../util/formato'
 import { faixaDaNota, notaDoTime } from '../util/notas'
+import { Sigla } from '../componentes/Sigla'
 
 // Cor da barra de cada faixa; a do título usa a cor do texto, como no design.
 const COR_FAIXA: Record<string, string> = { Título: 'bg-texto' }
@@ -120,11 +121,21 @@ export function PaginaTime() {
               <thead className="font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2">
                 <tr className="h-[34px]">
                   <th scope="col" className="px-4 text-left font-extrabold">RECORTE</th>
-                  <th scope="col" className="w-[70px] font-extrabold">PTS</th>
-                  <th scope="col" className="w-[60px] font-extrabold">J</th>
-                  <th scope="col" className="w-20 font-extrabold">V-E-D</th>
-                  <th scope="col" className="w-[70px] font-extrabold">GOLS</th>
-                  <th scope="col" className="w-[110px] font-extrabold">APROV.</th>
+                  <th scope="col" className="w-[70px] font-extrabold">
+                    <Sigla dica="Pontos: 3 por vitória, 1 por empate">PTS</Sigla>
+                  </th>
+                  <th scope="col" className="w-[60px] font-extrabold">
+                    <Sigla dica="Jogos disputados">J</Sigla>
+                  </th>
+                  <th scope="col" className="w-20 font-extrabold">
+                    <Sigla dica="Vitórias, empates e derrotas">V-E-D</Sigla>
+                  </th>
+                  <th scope="col" className="w-[70px] font-extrabold">
+                    <Sigla dica="Gols marcados e gols sofridos">GOLS</Sigla>
+                  </th>
+                  <th scope="col" className="w-[110px] font-extrabold">
+                    <Sigla dica="Aproveitamento: porcentagem dos pontos possíveis que o time ganhou">APROV.</Sigla>
+                  </th>
                   <th scope="col" className="w-[150px] pr-4 font-extrabold">ÚLTIMOS 5</th>
                 </tr>
               </thead>

@@ -12,6 +12,7 @@ import { TituloPagina } from '../componentes/TituloPagina'
 import { usePreferencias } from '../preferencias'
 import { contar, useAnimacao } from '../util/animacao'
 import { formatarSaldo } from '../util/formato'
+import { Sigla } from '../componentes/Sigla'
 
 const COLUNAS = 'grid grid-cols-[minmax(170px,1fr)_44px_90px_90px_110px_56px_80px_240px]'
 const cabecalho = 'px-1.5 py-2 font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2 sm:px-2'
@@ -94,25 +95,25 @@ function TabelaTempos({ times, progresso }: { times: DesempenhoPorTempo[]; progr
         <div role="row" className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center`}>
           <span role="columnheader" className={`${cabecalho} text-left`}>TIME</span>
           <span role="columnheader" className={cabecalho}>
-            <abbr title="Jogos com placar do intervalo" className="no-underline">J</abbr>
+            <Sigla dica="Jogos com placar do intervalo">J</Sigla>
           </span>
           <span role="columnheader" className={cabecalho}>
-            <abbr title="Gols marcados e sofridos no 1º tempo" className="no-underline">1º TEMPO</abbr>
+            <Sigla dica="Gols marcados e sofridos no 1º tempo">1º TEMPO</Sigla>
           </span>
           <span role="columnheader" className={cabecalho}>
-            <abbr title="Gols marcados e sofridos no 2º tempo" className="no-underline">2º TEMPO</abbr>
+            <Sigla dica="Gols marcados e sofridos no 2º tempo">2º TEMPO</Sigla>
           </span>
           <span role="columnheader" className={cabecalho}>
-            <abbr title="Pontos se os jogos terminassem no intervalo" className="no-underline">PTS NO INT.</abbr>
-          </span>
-          <span role="columnheader" className={cabecalho}>PTS</span>
-          <span role="columnheader" className={cabecalho}>
-            <abbr title="Viradas a favor / viradas sofridas" className="no-underline">VIRADAS</abbr>
+            <Sigla dica="Pontos se os jogos terminassem no intervalo">PTS NO INT.</Sigla>
           </span>
           <span role="columnheader" className={cabecalho}>
-            <abbr title="Pontos ganhos (+) ou perdidos (−) depois do intervalo" className="no-underline">
-              DEPOIS DO INTERVALO
-            </abbr>
+            <Sigla dica="Pontos de verdade, no fim dos jogos">PTS</Sigla>
+          </span>
+          <span role="columnheader" className={cabecalho}>
+            <Sigla dica="Viradas a favor / viradas sofridas">VIRADAS</Sigla>
+          </span>
+          <span role="columnheader" className={cabecalho}>
+            <Sigla dica="Pontos ganhos (+) ou perdidos (−) depois do intervalo">DEPOIS DO INTERVALO</Sigla>
           </span>
         </div>
         {ordenados.map((linha) => (

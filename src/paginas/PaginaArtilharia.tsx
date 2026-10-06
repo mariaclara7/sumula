@@ -10,6 +10,7 @@ import { TituloPagina } from '../componentes/TituloPagina'
 import { usePreferencias } from '../preferencias'
 import { contar, useAnimacao } from '../util/animacao'
 import { notaDoJogador } from '../util/notas'
+import { Sigla } from '../componentes/Sigla'
 
 const COLUNAS = 'grid grid-cols-[48px_minmax(200px,1fr)_200px_64px_64px_64px]'
 const cabecalho = 'font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2'
@@ -64,10 +65,10 @@ export function PaginaArtilharia() {
                 <span role="columnheader" className={`${cabecalho} text-left`}>JOGADOR</span>
                 <span role="columnheader" className={cabecalho}>GOLS</span>
                 <span role="columnheader" className={cabecalho}>
-                  <abbr title="Assistências" className="no-underline">ASSIST.</abbr>
+                  <Sigla dica="Assistências">ASSIST.</Sigla>
                 </span>
                 <span role="columnheader" className={cabecalho}>
-                  <abbr title="Gols de pênalti" className="no-underline">PÊN.</abbr>
+                  <Sigla dica="Gols de pênalti">PÊN.</Sigla>
                 </span>
                 <span role="columnheader" className={cabecalho}>JOGOS</span>
               </div>

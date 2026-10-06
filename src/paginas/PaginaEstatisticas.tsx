@@ -10,6 +10,7 @@ import { Pagina } from '../componentes/Pagina'
 import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { usePreferencias } from '../preferencias'
 import { ROTULO_SEQUENCIA, formatarMedia, mediaPorJogo, percentual } from '../util/estatisticas'
+import { Sigla } from '../componentes/Sigla'
 
 type Coluna = {
   chave: string
@@ -212,9 +213,7 @@ function TabelaOrdenavel({ times, colunas }: { times: EstatisticasTime[]; coluna
                 TIME
               </th>
               <th scope="col" className="hidden w-12 font-extrabold sm:table-cell">
-                <abbr title="Jogos" className="no-underline">
-                  J
-                </abbr>
+                <Sigla dica="Jogos disputados">J</Sigla>
               </th>
               {colunas.map((c) => {
                 const ativa = c.chave === ordem.chave
@@ -227,11 +226,13 @@ function TabelaOrdenavel({ times, colunas }: { times: EstatisticasTime[]; coluna
                   >
                     <button
                       type="button"
-                      title={c.titulo}
                       onClick={() => ordenarPor(c)}
                       className={`cursor-pointer px-1.5 py-1 tracking-[1px] ${ativa ? 'bg-texto text-texto-invertido' : 'hover:text-texto'}`}
                     >
-                      {c.rotulo} {ativa ? (ordem.crescente ? '▲' : '▼') : ''}
+                      <Sigla dica={`${c.titulo} · ordena a tabela`} dentroDeBotao>
+                        {c.rotulo}
+                      </Sigla>{' '}
+                      {ativa ? (ordem.crescente ? '▲' : '▼') : ''}
                     </button>
                   </th>
                 )

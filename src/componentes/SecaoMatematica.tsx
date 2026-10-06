@@ -6,6 +6,7 @@ import { ULTIMA_POSICAO_SEGURA, metas, selosMatematicos } from '../util/matemati
 import { Escudo } from './Escudo'
 import { Carregando } from './Estado'
 import { SeloMatematico } from './SeloMatematico'
+import { Sigla } from './Sigla'
 
 const COLUNAS = 'grid grid-cols-[minmax(150px,1fr)_52px_52px_96px_minmax(200px,1.4fr)]'
 
@@ -37,13 +38,13 @@ export function SecaoMatematica() {
               >
                 <span role="columnheader" className="text-left">TIME</span>
                 <span role="columnheader">
-                  <abbr title="Pontos atuais" className="no-underline">PTS</abbr>
+                  <Sigla dica="Pontos atuais">PTS</Sigla>
                 </span>
                 <span role="columnheader">
-                  <abbr title="Pontos máximos possíveis" className="no-underline">MÁX</abbr>
+                  <Sigla dica="Pontos máximos possíveis">MÁX</Sigla>
                 </span>
                 <span role="columnheader">
-                  <abbr title="Melhor e pior posição que ainda pode alcançar" className="no-underline">PODE TERMINAR</abbr>
+                  <Sigla dica="Melhor e pior posição que ainda pode alcançar">PODE TERMINAR</Sigla>
                 </span>
                 <span role="columnheader" className="text-left">SITUAÇÃO</span>
               </div>

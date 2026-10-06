@@ -44,6 +44,7 @@ import {
   type PalpitesUsuario,
   type PlacarDigitado,
 } from '../util/simulador'
+import { Sigla } from '../componentes/Sigla'
 
 const MAXIMO = 5
 const libertadores = ZONAS.find((z) => z.nome === 'Libertadores')!
@@ -888,7 +889,7 @@ function Comparar({
               </span>
             ))}
             <span role="columnheader" className="text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2">
-              HOJE
+              <Sigla dica="Posição do time hoje, na tabela de verdade">HOJE</Sigla>
             </span>
           </div>
           {linhas.map(({ time, previstas, hoje }) => (

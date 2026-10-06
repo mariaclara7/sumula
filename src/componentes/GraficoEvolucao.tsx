@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PontoEvolucao } from '../api/tipos'
 import { TabelaDados, Variacao } from './TabelaDados'
+import { Sigla } from './Sigla'
 
 type Props = {
   pontos: PontoEvolucao[]
@@ -129,9 +130,7 @@ export function GraficoEvolucao({ pontos, quantidadeTimes, nomeTime, progresso =
             <th scope="col">RODADA</th>
             <th scope="col">POSIÇÃO</th>
             <th scope="col">
-              <abbr title="Variação de posição em relação à rodada anterior" className="no-underline">
-                ▲▼
-              </abbr>
+              <Sigla dica="Variação de posição em relação à rodada anterior">▲▼</Sigla>
             </th>
             <th scope="col">PONTOS</th>
             <th scope="col">NA RODADA</th>

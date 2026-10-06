@@ -12,6 +12,7 @@ import { TituloPagina } from '../componentes/TituloPagina'
 import { FAIXAS_CHANCES, chanceNaFaixa, type Zona } from '../config'
 import { usePreferencias } from '../preferencias'
 import { contar, useAnimacao } from '../util/animacao'
+import { Sigla } from '../componentes/Sigla'
 
 // Nomes curtos das colunas, como no cabeçalho do design.
 const ROTULO: Record<string, string> = {
@@ -87,11 +88,12 @@ export function PaginaChances() {
         >
           <button
             type="button"
-            title={`Ordenar por ${titulo.toLowerCase()}`}
             onClick={() => ordenarPor(chave)}
             className={`cursor-pointer px-1.5 py-1 tracking-[1px] whitespace-nowrap ${ativa ? 'bg-texto text-texto-invertido' : 'hover:text-texto'}`}
           >
-            {rotulo}
+            <Sigla dica={`${titulo} · ordena a tabela`} dentroDeBotao>
+              {rotulo}
+            </Sigla>
             {ativa && <span aria-hidden>{ordem.crescente ? ' ▲' : ' ▼'}</span>}
           </button>
         </span>

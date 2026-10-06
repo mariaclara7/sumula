@@ -9,6 +9,7 @@ import { Escudo } from './Escudo'
 import { LegendaZonas } from './LegendaZonas'
 import { Seletor } from './Seletor'
 import { useDeslizar } from './useDeslizar'
+import { Sigla } from './Sigla'
 
 // Peças do simulador usadas também na sala: navegação de rodadas, o jogo com os campos de placar e a tabela.
 
@@ -225,24 +226,16 @@ export function TabelaSimulada({ linhas, posicaoReal, titulo }: PropsTabela) {
             TIME
           </span>
           <span role="columnheader">
-            <abbr title="Pontos" className="no-underline">
-              P
-            </abbr>
+            <Sigla dica="Pontos: 3 por vitória, 1 por empate">P</Sigla>
           </span>
           <span role="columnheader">
-            <abbr title="Jogos" className="no-underline">
-              J
-            </abbr>
+            <Sigla dica="Jogos disputados">J</Sigla>
           </span>
           <span role="columnheader">
-            <abbr title="Vitórias" className="no-underline">
-              V
-            </abbr>
+            <Sigla dica="Vitórias">V</Sigla>
           </span>
           <span role="columnheader">
-            <abbr title="Saldo de gols" className="no-underline">
-              SG
-            </abbr>
+            <Sigla dica="Saldo de gols: gols marcados menos gols sofridos">SG</Sigla>
           </span>
         </div>
         <div ref={corpo} role="rowgroup">
