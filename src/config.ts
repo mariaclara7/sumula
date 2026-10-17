@@ -48,9 +48,14 @@ export const FAIXAS_CHANCES: Zona[] = [
   ...ZONAS,
 ]
 
-/** Soma das chances de terminar entre as posições da faixa. */
+/**
+ * Soma das chances de terminar entre as posições da faixa. Arredonda o resultado porque somar frações em ponto
+ * flutuante sai torto: 0,6 + 0,3 + 0,1 dá 0,9999999999999999, e um time com 100% nas simulações apareceria
+ * como "mais de 99%".
+ */
 export function chanceNaFaixa(posicoes: number[], faixa: Pick<Zona, 'de' | 'ate'>) {
-  return posicoes.slice(faixa.de - 1, faixa.ate).reduce((soma, chance) => soma + chance, 0)
+  const soma = posicoes.slice(faixa.de - 1, faixa.ate).reduce((total, chance) => total + chance, 0)
+  return Math.min(1, Math.max(0, Math.round(soma * 1e9) / 1e9))
 }
 
 export function zonaDaPosicao(posicao: number): Zona | undefined {
