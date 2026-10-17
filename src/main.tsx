@@ -11,6 +11,7 @@ import { PaginaClassificacao } from './paginas/PaginaClassificacao'
 import { PaginaConfronto } from './paginas/PaginaConfronto'
 import { PaginaEstatisticas } from './paginas/PaginaEstatisticas'
 import { PaginaEvolucao } from './paginas/PaginaEvolucao'
+import { PaginaJogos } from './paginas/PaginaJogos'
 import { PaginaNaoEncontrada } from './paginas/PaginaNaoEncontrada'
 import { PaginaSala } from './paginas/PaginaSala'
 import { PaginaSalas } from './paginas/PaginaSalas'
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<Layout />}>
               <Route index element={<PaginaClassificacao />} />
               <Route path="times/:timeId" element={<PaginaTime />} />
+              <Route path="jogos" element={<PaginaJogos />} />
               <Route path="simulador" element={<PaginaSimulador />} />
               <Route path="sala" element={<PaginaSalas />} />
               <Route path="sala/:codigo" element={<PaginaSala />} />

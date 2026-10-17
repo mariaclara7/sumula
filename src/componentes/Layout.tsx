@@ -11,6 +11,7 @@ import { Seletor } from './Seletor'
 
 const LINKS = [
   { para: '/', rotulo: 'Classificação' },
+  { para: '/jogos', rotulo: 'Jogos' },
   { para: '/simulador', rotulo: 'Simulador' },
   { para: '/sala', rotulo: 'Sala' },
   { para: '/chances', rotulo: 'Chances' },
