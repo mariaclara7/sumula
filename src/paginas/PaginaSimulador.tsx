@@ -134,7 +134,6 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
     () => calcularClassificacao(times.lista, jogosDaSimulacao(partidas, palpites)),
     [partidas, times.lista, palpites],
   )
-  const posicaoReal = new Map(real.map((l) => [l.time.id, l.posicao]))
 
   async function compartilhar() {
     const codigo = codificarPalpites(meusPalpites)
@@ -322,11 +321,11 @@ function Simulador({ partidas, times, palpitesSumula }: PropsSimulador) {
         </section>
 
         <section id="tabela-simulada" aria-label="Tabela simulada" className="scroll-mt-4 lg:sticky lg:top-4">
-          <TabelaSimulada linhas={simulada} posicaoReal={posicaoReal} />
+          <TabelaSimulada linhas={simulada} real={real} />
           <p className="mt-2 text-xs text-texto-2">
             ▲▼ comparam com a{' '}
             <Link to="/" className="font-bold text-destaque hover:underline">
-              tabela de verdade
+              tabela de hoje
             </Link>
             . Desempate: pontos, vitórias, saldo, gols pró e confronto direto.
           </p>

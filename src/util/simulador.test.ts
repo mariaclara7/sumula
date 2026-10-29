@@ -6,6 +6,8 @@ import {
   lerPalpitesSalvos,
   preencherComPalpitesDaSumula,
   rodadaInicial,
+  acertoDoPalpite,
+  trocarPalpitesPendentes,
 } from './simulador'
 
 const partida = (id: number, rodada: number, gols?: [number, number], status?: Partida['status']): Partida => ({
@@ -93,5 +95,25 @@ describe('simulador', () => {
     const salvo = JSON.stringify({ 1: { mandante: 2, visitante: null }, 2: { mandante: 'x' }, 3: 'lixo', 4: { mandante: 50, visitante: 1 } })
     expect(lerPalpitesSalvos(salvo)).toEqual({ 1: { mandante: 2, visitante: null } })
     expect(lerPalpitesSalvos('{quebrado')).toEqual({})
+  })
+
+  it('diz se o palpite cravou o placar, acertou só o resultado ou errou', () => {
+    const jogo = partida(1, 1, [2, 1])
+    expect(acertoDoPalpite(jogo, { mandante: 2, visitante: 1 })).toBe('cravou')
+    expect(acertoDoPalpite(jogo, { mandante: 3, visitante: 0 })).toBe('resultado')
+    expect(acertoDoPalpite(jogo, { mandante: 1, visitante: 1 })).toBe('errou')
+    expect(acertoDoPalpite(partida(2, 1, [0, 0]), { mandante: 2, visitante: 2 })).toBe('resultado')
+    expect(acertoDoPalpite(jogo, { mandante: 2, visitante: null })).toBeNull()
+    expect(acertoDoPalpite(partida(3, 1), { mandante: 2, visitante: 1 })).toBeNull()
+  })
+
+  it('ao trocar ou limpar os palpites, guarda os dos jogos que já aconteceram', () => {
+    const jogos = [partida(1, 1, [2, 1]), partida(2, 2), partida(3, 2)]
+    const atuais = { 1: { mandante: 1, visitante: 0 }, 2: { mandante: 0, visitante: 0 } }
+    expect(trocarPalpitesPendentes(jogos, atuais, {})).toEqual({ 1: { mandante: 1, visitante: 0 } })
+    expect(trocarPalpitesPendentes(jogos, atuais, { 1: { mandante: 5, visitante: 5 }, 3: { mandante: 2, visitante: 2 } })).toEqual({
+      1: { mandante: 1, visitante: 0 },
+      3: { mandante: 2, visitante: 2 },
+    })
   })
 })

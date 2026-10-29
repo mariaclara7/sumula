@@ -98,3 +98,31 @@ export const CHAVE_PALPITES = `sumula:simulador:${COMPETICAO}:${TEMPORADA}`
 export function palpitesDoSimulador() {
   return lerPalpitesSalvos(lerArmazenado(CHAVE_PALPITES))
 }
+
+export type Acerto = 'cravou' | 'resultado' | 'errou'
+
+/**
+ * Como foi o palpite num jogo que já terminou: cravou o placar, acertou só o resultado (vitória de quem, ou
+ * empate) ou errou. null se o jogo não terminou ou não havia palpite completo.
+ */
+export function acertoDoPalpite(partida: Partida, palpite: PlacarDigitado | undefined): Acerto | null {
+  if (!partida.temResultado || partida.golsMandante === null || partida.golsVisitante === null) return null
+  if (palpite?.mandante == null || palpite.visitante == null) return null
+  if (palpite.mandante === partida.golsMandante && palpite.visitante === partida.golsVisitante) return 'cravou'
+  return Math.sign(palpite.mandante - palpite.visitante) === Math.sign(partida.golsMandante - partida.golsVisitante)
+    ? 'resultado'
+    : 'errou'
+}
+
+/**
+ * Troca os palpites dos jogos que ainda vão acontecer e mantém os dos jogos que já aconteceram: o que cada um
+ * palpitou numa rodada encerrada fica guardado (na sala, para comparar com o resultado).
+ */
+export function trocarPalpitesPendentes(partidas: Partida[], atuais: PalpitesUsuario, novos: PalpitesUsuario): PalpitesUsuario {
+  const resultado: PalpitesUsuario = {}
+  for (const partida of partidas) {
+    const origem = podePalpitar(partida) ? novos : atuais
+    if (origem[partida.id]) resultado[partida.id] = origem[partida.id]
+  }
+  return resultado
+}

@@ -35,12 +35,15 @@ import {
   type MinhaParticipacao,
 } from '../util/salas'
 import {
+  acertoDoPalpite,
   jogosDaSimulacao,
   lerGols,
   palpitesDoSimulador,
   podePalpitar,
   preencherComPalpitesDaSumula,
   rodadaInicial,
+  trocarPalpitesPendentes,
+  type Acerto,
   type PalpitesUsuario,
   type PlacarDigitado,
 } from '../util/simulador'
@@ -268,6 +271,9 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     })
   }
 
+  // Palpites completos nos jogos que ainda vão acontecer (os dos jogos encerrados ficam guardados e não contam).
+  const meusPendentes = restantes.filter((p) => meusPalpites[p.id]?.mandante != null && meusPalpites[p.id]?.visitante != null).length
+
   async function trazerDoSimulador() {
     const doSimulador = palpitesDoSimulador()
     if (Object.keys(doSimulador).length === 0) {
@@ -275,26 +281,28 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
       return
     }
     if (
-      Object.keys(meusPalpites).length > 0 &&
+      meusPendentes > 0 &&
       !(await confirmar({
         titulo: 'Trazer do Simulador?',
-        texto: 'Os seus palpites nesta sala vão ser trocados pelos que você fez no Simulador.',
+        texto:
+          'Os seus palpites dos jogos que ainda vão acontecer vão ser trocados pelos do Simulador. Os dos jogos que já aconteceram continuam guardados.',
         confirmar: 'Trazer palpites',
         perigo: true,
       }))
     )
       return
-    mudarMeus(() => doSimulador)
+    mudarMeus((atuais) => trocarPalpitesPendentes(partidas, atuais, doSimulador))
   }
 
   async function limpar() {
     const apagar = await confirmar({
       titulo: 'Apagar seus palpites da sala?',
-      texto: 'Os seus amigos também vão deixar de ver esses palpites. Não dá para desfazer.',
+      texto:
+        'Os palpites dos jogos que ainda vão acontecer vão ser apagados, e os seus amigos deixam de ver. Os dos jogos que já aconteceram continuam guardados. Não dá para desfazer.',
       confirmar: 'Apagar palpites',
       perigo: true,
     })
-    if (apagar) mudarMeus(() => ({}))
+    if (apagar) mudarMeus((atuais) => trocarPalpitesPendentes(partidas, atuais, {}))
   }
 
   async function sair() {
@@ -481,7 +489,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                     <button
                       type="button"
                       onClick={limpar}
-                      disabled={Object.keys(meusPalpites).length === 0}
+                      disabled={meusPendentes === 0}
                       className="cursor-pointer border-2 border-texto bg-superficie px-[18px] py-3 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Limpar
@@ -509,9 +517,29 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                         return faltam ? `${faltam} sem palpite` : undefined
                       }}
                     />
-                    <a href="#tabela-da-sala" className="mt-2 block text-right text-[13px] font-bold text-destaque lg:hidden">
-                      Ver a tabela ↓
-                    </a>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px]">
+                      {partidas.some((p) => p.rodada === rodada && p.temResultado) ? (
+                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-texto-2">
+                          <span className="flex items-center gap-1">
+                            <span aria-hidden className="border border-verde bg-verde px-1 font-mono text-[10px] font-bold text-white">
+                              ✓✓
+                            </span>
+                            cravou o placar
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span aria-hidden className="border border-verde px-1 font-mono text-[10px] font-bold text-verde">
+                              ✓
+                            </span>
+                            acertou o resultado
+                          </span>
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <a href="#tabela-da-sala" className="text-[13px] font-bold text-destaque lg:hidden">
+                        Ver a tabela ↓
+                      </a>
+                    </div>
                     <ul className="mt-3 flex flex-col gap-2.5">
                       {partidas
                         .filter((p) => p.rodada === rodada)
@@ -534,8 +562,11 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                               rotulo={ehEu ? 'Seu palpite' : `Palpite de ${selecionado.participante.nome}`}
                               corPlacar={ehEu ? undefined : corDoParticipante(selecionado.participante.cor)}
                             >
-                              {podePalpitar(partida) && outros.length > 0 && (
-                                <PalpitesDosOutros partidaId={partida.id} outros={outros} euId={eu?.id} />
+                              {partida.temResultado ? (
+                                <PalpitesDoJogo partida={partida} simulados={[selecionado, ...outros]} euId={eu?.id} />
+                              ) : (
+                                podePalpitar(partida) &&
+                                outros.length > 0 && <PalpitesDosOutros partidaId={partida.id} outros={outros} euId={eu?.id} />
                               )}
                             </JogoDoSimulador>
                           )
@@ -546,7 +577,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                   <section id="tabela-da-sala" aria-label="Tabela final" className="scroll-mt-4 lg:sticky lg:top-4">
                     <TabelaSimulada
                       linhas={selecionado.tabela}
-                      posicaoReal={posicaoReal}
+                      real={real}
                       titulo={
                         <div className="flex items-center gap-2.5">
                           <Avatar participante={selecionado.participante} tamanho={26} />
@@ -568,7 +599,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                     <p className="mt-2 text-xs text-texto-2">
                       ▲▼ comparam com a{' '}
                       <Link to="/" className="font-bold text-destaque hover:underline">
-                        tabela de verdade
+                        tabela de hoje
                       </Link>
                       . Os jogos que já aconteceram valem o resultado real.
                     </p>
@@ -823,6 +854,44 @@ function ListaTimes({ rotulo, cor, linhas }: { rotulo: string; cor: string; linh
             {l.time.sigla}
           </li>
         ))}
+      </ul>
+    </div>
+  )
+}
+
+const ESTILO_ACERTO: Record<Acerto, { classe: string; texto: string; marca: string }> = {
+  cravou: { classe: 'border-verde bg-verde text-white', texto: 'cravou o placar', marca: '✓✓' },
+  resultado: { classe: 'border-verde text-verde', texto: 'acertou o resultado', marca: '✓' },
+  errou: { classe: 'border-borda text-texto-2', texto: 'errou', marca: '' },
+}
+
+/** Jogo encerrado: o palpite que cada um tinha feito, marcado se cravou o placar ou acertou o resultado. */
+function PalpitesDoJogo({ partida, simulados, euId }: { partida: Partida; simulados: Simulado[]; euId: number | undefined }) {
+  return (
+    <div className="mt-2 border-t border-dashed border-borda pt-2">
+      <div className="text-center font-mono text-[10px] font-extrabold tracking-[1.5px] text-texto-2">PALPITES</div>
+      <ul aria-label="Palpites para este jogo" className="mt-1.5 flex flex-wrap justify-center gap-x-2 gap-y-1.5">
+        {simulados.map((s) => {
+          const p = s.palpites[partida.id]
+          const acerto = acertoDoPalpite(partida, p)
+          const nome = s.participante.id === euId ? 'Você' : s.participante.nome
+          const estilo = acerto ? ESTILO_ACERTO[acerto] : null
+          return (
+            <li
+              key={s.participante.id}
+              title={`${nome}: ${acerto ? `${p!.mandante} × ${p!.visitante}, ${estilo!.texto}` : 'sem palpite'}`}
+              className={`flex items-center gap-1.5 border py-0.5 pr-1.5 pl-0.5 font-mono text-[11px] font-bold ${
+                estilo ? estilo.classe : 'border-transparent text-texto-3'
+              }`}
+            >
+              <Avatar participante={s.participante} tamanho={16} />
+              <span className="sr-only">{nome}:</span>
+              {acerto ? `${p!.mandante}×${p!.visitante}` : '—'}
+              {estilo?.marca && <span aria-hidden>{estilo.marca}</span>}
+              <span className="sr-only">{estilo ? `, ${estilo.texto}` : 'sem palpite'}</span>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )

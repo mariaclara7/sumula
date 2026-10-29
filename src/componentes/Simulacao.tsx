@@ -1,9 +1,10 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { LinhaClassificacao, Palpite, Partida, Time } from '../api/tipos'
 import { zonaDaPosicao } from '../config'
 import { usePreferencias } from '../preferencias'
 import { formatarDataPartida, formatarSaldo } from '../util/formato'
 import { podePalpitar, type PlacarDigitado } from '../util/simulador'
+import { Abas } from './Abas'
 import { BarraPalpite } from './BarraPalpite'
 import { Escudo } from './Escudo'
 import { LegendaZonas } from './LegendaZonas'
@@ -201,92 +202,202 @@ function CampoGols({ time, valor, aoAlterar }: { time: Time; valor: number | nul
 
 const COLUNAS = 'grid grid-cols-[40px_minmax(0,1fr)_40px_36px_36px_44px]'
 
+type ModoTabela = 'palpites' | 'hoje' | 'lado'
+
 type PropsTabela = {
+  /** Tabela final com os palpites. */
   linhas: LinhaClassificacao[]
-  posicaoReal: Map<number, number>
+  /** Tabela de verdade, de hoje (só os jogos disputados). */
+  real: LinhaClassificacao[]
   /** Cabeçalho acima da tabela (na sala: de quem é a tabela). */
   titulo?: ReactNode
 }
 
-export function TabelaSimulada({ linhas, posicaoReal, titulo }: PropsTabela) {
+/**
+ * A tabela com os palpites, e duas outras vistas para comparar com a de hoje: a tabela de verdade e as duas
+ * posições lado a lado. Ao trocar entre "com os palpites" e "hoje", as linhas deslizam para o lugar novo.
+ */
+export function TabelaSimulada({ linhas, real, titulo }: PropsTabela) {
+  const [modo, setModo] = useState<ModoTabela>('palpites')
+  const posicaoReal = new Map(real.map((l) => [l.time.id, l.posicao]))
+
+  return (
+    <div className="border-2 border-texto bg-superficie">
+      {titulo && <div className="border-b-2 border-texto px-4 py-3">{titulo}</div>}
+      <div className="border-b-2 border-texto px-3 py-2.5">
+        <Abas
+          rotulo="Qual tabela mostrar"
+          valor={modo}
+          aoMudar={setModo}
+          opcoes={[
+            { valor: 'palpites', rotulo: 'Com os palpites' },
+            { valor: 'hoje', rotulo: 'Hoje' },
+            { valor: 'lado', rotulo: 'Lado a lado' },
+          ]}
+        />
+      </div>
+      {modo === 'lado' ? (
+        <LadoALado linhas={linhas} posicaoReal={posicaoReal} />
+      ) : (
+        <Classificacao
+          linhas={modo === 'hoje' ? real : linhas}
+          posicaoReal={modo === 'hoje' ? undefined : posicaoReal}
+          rotulo={modo === 'hoje' ? 'Classificação de hoje' : 'Classificação com os palpites'}
+        />
+      )}
+      <div className="border-t border-borda px-3 pb-3">
+        <LegendaZonas className="mt-3" />
+      </div>
+    </div>
+  )
+}
+
+function Classificacao({
+  linhas,
+  posicaoReal,
+  rotulo,
+}: {
+  linhas: LinhaClassificacao[]
+  /** Com ▲▼ em relação à tabela de hoje; sem, é a própria tabela de hoje. */
+  posicaoReal: Map<number, number> | undefined
+  rotulo: string
+}) {
   const { meuTime } = usePreferencias()
   const corpo = useRef<HTMLDivElement>(null)
   useDeslizar(corpo, linhas.map((l) => l.time.id).join(), 500)
 
   return (
-    <div className="border-2 border-texto bg-superficie">
-      {titulo && <div className="border-b-2 border-texto px-4 py-3">{titulo}</div>}
-      <div role="table" aria-label="Classificação simulada">
-        <div
-          role="row"
-          className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}
-        >
-          <span role="columnheader">#</span>
-          <span role="columnheader" className="text-left">
-            TIME
-          </span>
-          <span role="columnheader">
-            <Sigla dica="Pontos: 3 por vitória, 1 por empate">P</Sigla>
-          </span>
-          <span role="columnheader">
-            <Sigla dica="Jogos disputados">J</Sigla>
-          </span>
-          <span role="columnheader">
-            <Sigla dica="Vitórias">V</Sigla>
-          </span>
-          <span role="columnheader">
-            <Sigla dica="Saldo de gols: gols marcados menos gols sofridos">SG</Sigla>
-          </span>
-        </div>
-        <div ref={corpo} role="rowgroup">
-          {linhas.map((linha) => {
-            const zona = zonaDaPosicao(linha.posicao)
-            const variacao = (posicaoReal.get(linha.time.id) ?? linha.posicao) - linha.posicao
-            return (
-              <div
-                key={linha.time.id}
-                role="row"
-                data-deslizar={linha.time.id}
-                className={`${COLUNAS} h-10 items-center border-b border-borda text-center last:border-b-0 ${
-                  meuTime === linha.time.id ? 'bg-realce' : 'bg-superficie'
-                }`}
-              >
-                <div role="cell" className="flex h-full items-center gap-2">
-                  <span title={zona?.nome} className={`h-full w-1 ${zona?.cor ?? 'bg-transparent'}`} />
-                  <span className="text-base font-black">{linha.posicao}</span>
-                </div>
-                <div role="cell" className="flex min-w-0 items-center gap-2 text-left">
-                  <Escudo time={linha.time} tamanho={22} />
-                  <span className="truncate text-sm font-bold">{linha.time.nomeCurto}</span>
-                  {variacao !== 0 && (
-                    <span
-                      title={`${variacao > 0 ? 'Sobe' : 'Cai'} ${Math.abs(variacao)} em relação à tabela de verdade`}
-                      className={`font-mono text-[11px] font-extrabold whitespace-nowrap ${variacao > 0 ? 'text-verde' : 'text-vermelho'}`}
-                    >
-                      {variacao > 0 ? `▲${variacao}` : `▼${-variacao}`}
-                    </span>
-                  )}
-                </div>
-                <span role="cell" className="text-base font-black tabular-nums">
-                  {linha.pontos}
-                </span>
-                <span role="cell" className="font-mono text-[13px] text-texto-2 tabular-nums">
-                  {linha.jogos}
-                </span>
-                <span role="cell" className="font-mono text-[13px] tabular-nums">
-                  {linha.vitorias}
-                </span>
-                <span role="cell" className="font-mono text-[13px] tabular-nums">
-                  {formatarSaldo(linha.saldo)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+    <div role="table" aria-label={rotulo}>
+      <div
+        role="row"
+        className={`${COLUNAS} h-9 items-center border-b-2 border-texto text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}
+      >
+        <span role="columnheader">#</span>
+        <span role="columnheader" className="text-left">
+          TIME
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Pontos: 3 por vitória, 1 por empate">P</Sigla>
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Jogos disputados">J</Sigla>
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Vitórias">V</Sigla>
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Saldo de gols: gols marcados menos gols sofridos">SG</Sigla>
+        </span>
       </div>
-      <div className="border-t border-borda px-3 pb-3">
-        <LegendaZonas className="mt-3" />
+      <div ref={corpo} role="rowgroup">
+        {linhas.map((linha) => {
+          const zona = zonaDaPosicao(linha.posicao)
+          const variacao = posicaoReal ? (posicaoReal.get(linha.time.id) ?? linha.posicao) - linha.posicao : 0
+          return (
+            <div
+              key={linha.time.id}
+              role="row"
+              data-deslizar={linha.time.id}
+              className={`${COLUNAS} h-10 items-center border-b border-borda text-center last:border-b-0 ${
+                meuTime === linha.time.id ? 'bg-realce' : 'bg-superficie'
+              }`}
+            >
+              <div role="cell" className="flex h-full items-center gap-2">
+                <span title={zona?.nome} className={`h-full w-1 ${zona?.cor ?? 'bg-transparent'}`} />
+                <span className="text-base font-black">{linha.posicao}</span>
+              </div>
+              <div role="cell" className="flex min-w-0 items-center gap-2 text-left">
+                <Escudo time={linha.time} tamanho={22} />
+                <span className="truncate text-sm font-bold">{linha.time.nomeCurto}</span>
+                {variacao !== 0 && (
+                  <span
+                    title={`${variacao > 0 ? 'Sobe' : 'Cai'} ${Math.abs(variacao)} em relação à tabela de hoje`}
+                    className={`font-mono text-[11px] font-extrabold whitespace-nowrap ${variacao > 0 ? 'text-verde' : 'text-vermelho'}`}
+                  >
+                    {variacao > 0 ? `▲${variacao}` : `▼${-variacao}`}
+                  </span>
+                )}
+              </div>
+              <span role="cell" className="text-base font-black tabular-nums">
+                {linha.pontos}
+              </span>
+              <span role="cell" className="font-mono text-[13px] text-texto-2 tabular-nums">
+                {linha.jogos}
+              </span>
+              <span role="cell" className="font-mono text-[13px] tabular-nums">
+                {linha.vitorias}
+              </span>
+              <span role="cell" className="font-mono text-[13px] tabular-nums">
+                {formatarSaldo(linha.saldo)}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
+  )
+}
+
+const COLUNAS_LADO = 'grid grid-cols-[minmax(0,1fr)_64px_64px_56px]'
+
+/** Uma linha por time: a posição de hoje, a posição no fim com os palpites e quanto muda. */
+function LadoALado({ linhas, posicaoReal }: { linhas: LinhaClassificacao[]; posicaoReal: Map<number, number> }) {
+  const { meuTime } = usePreferencias()
+  return (
+    <div role="table" aria-label="Posição hoje e com os palpites">
+      <div
+        role="row"
+        className={`${COLUNAS_LADO} h-9 items-center border-b-2 border-texto px-3 text-center font-mono text-[11px] font-extrabold tracking-[1px] text-texto-2`}
+      >
+        <span role="columnheader" className="text-left">
+          TIME
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Posição na tabela de verdade, hoje">HOJE</Sigla>
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Posição no fim do campeonato, com os palpites">FIM</Sigla>
+        </span>
+        <span role="columnheader">
+          <Sigla dica="Quantas posições o time sobe (▲) ou cai (▼) até o fim, com os palpites">MUDA</Sigla>
+        </span>
+      </div>
+      {linhas.map((linha) => {
+        const hoje = posicaoReal.get(linha.time.id) ?? linha.posicao
+        const variacao = hoje - linha.posicao
+        return (
+          <div
+            key={linha.time.id}
+            role="row"
+            className={`${COLUNAS_LADO} h-10 items-center border-b border-borda px-3 text-center last:border-b-0 ${
+              meuTime === linha.time.id ? 'bg-realce' : ''
+            }`}
+          >
+            <div role="cell" className="flex min-w-0 items-center gap-2 text-left">
+              <Escudo time={linha.time} tamanho={22} />
+              <span className="truncate text-sm font-bold">{linha.time.nomeCurto}</span>
+            </div>
+            <Posicao posicao={hoje} apagada />
+            <Posicao posicao={linha.posicao} />
+            <span
+              role="cell"
+              className={`font-mono text-[13px] font-extrabold ${variacao > 0 ? 'text-verde' : variacao < 0 ? 'text-vermelho' : 'text-texto-3'}`}
+            >
+              {variacao > 0 ? `▲${variacao}` : variacao < 0 ? `▼${-variacao}` : '='}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Posicao({ posicao, apagada = false }: { posicao: number; apagada?: boolean }) {
+  const zona = zonaDaPosicao(posicao)
+  return (
+    <span role="cell" className="flex items-center justify-center gap-1.5" title={zona?.nome}>
+      <span aria-hidden className={`h-4 w-1 ${zona?.cor ?? 'bg-transparent'}`} />
+      <span className={`text-[15px] font-black tabular-nums ${apagada ? 'text-texto-2' : ''}`}>{posicao}º</span>
+    </span>
   )
 }
