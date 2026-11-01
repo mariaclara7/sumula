@@ -94,17 +94,30 @@ async function rotear(request: Request, ctx: Contexto): Promise<Response> {
   throw new ErroHttp(404, 'Endereço não encontrado.')
 }
 
+/** As salas da conta, com quem está em cada uma (nome e cor, para as bolinhas) e os palpites da própria pessoa. */
 async function minhasSalas(request: Request, ctx: Contexto) {
   const conta = await exigirConta(request, ctx)
-  const { results } = await ctx.db
+  const { results: salas } = await ctx.db
     .prepare(
-      `SELECT s.codigo, s.nome, (SELECT COUNT(*) FROM participantes WHERE sala = s.codigo) AS pessoas
+      `SELECT s.codigo, s.nome, p.palpites AS meusPalpites
        FROM participantes p JOIN salas s ON s.codigo = p.sala
        WHERE p.uid = ? ORDER BY s.atualizada_em DESC`,
     )
     .bind(conta.uid)
-    .all<{ codigo: string; nome: string; pessoas: number }>()
-  return json(results)
+    .all<{ codigo: string; nome: string; meusPalpites: string }>()
+  const { results: pessoas } = await ctx.db
+    .prepare(
+      `SELECT sala, nome, cor FROM participantes
+       WHERE sala IN (SELECT sala FROM participantes WHERE uid = ?) ORDER BY id`,
+    )
+    .bind(conta.uid)
+    .all<{ sala: string; nome: string; cor: number }>()
+  return json(
+    salas.map((s) => ({
+      ...s,
+      pessoas: pessoas.filter((p) => p.sala === s.codigo).map(({ nome, cor }) => ({ nome, cor })),
+    })),
+  )
 }
 
 async function criarSala(request: Request, ctx: Contexto) {

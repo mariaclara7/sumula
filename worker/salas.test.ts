@@ -152,9 +152,18 @@ describe('salas com conta', () => {
     expect(await eu.json()).toEqual({ id: a.participante.id, nome: 'Maria' })
     expect((await pedir('GET', `/api/salas/${a.codigo}/eu`, { conta: 'lucas' })).status).toBe(404)
 
-    const minhas = (await (await pedir('GET', '/api/salas', { conta: 'maria' })).json()) as { codigo: string; pessoas: number }[]
+    await pedir('PUT', `/api/salas/${a.codigo}/participantes/${a.participante.id}/palpites`, { conta: 'maria', corpo: { palpites: '1.a-21' } })
+    const minhas = (await (await pedir('GET', '/api/salas', { conta: 'maria' })).json()) as {
+      codigo: string
+      meusPalpites: string
+      pessoas: { nome: string; cor: number }[]
+    }[]
     expect(minhas.map((s) => s.codigo).sort()).toEqual([a.codigo, b.codigo].sort())
-    expect(minhas.find((s) => s.codigo === b.codigo)?.pessoas).toBe(2)
+    expect(minhas.find((s) => s.codigo === b.codigo)?.pessoas).toEqual([
+      { nome: 'Lucas', cor: 0 },
+      { nome: 'Maria', cor: 1 },
+    ])
+    expect(minhas.find((s) => s.codigo === a.codigo)?.meusPalpites).toBe('1.a-21')
   })
 
   it('liga à conta a participação de antes do login, pela chave antiga', async () => {

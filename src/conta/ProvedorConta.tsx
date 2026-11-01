@@ -13,6 +13,7 @@ function paraUsuario(u: User | null): Usuario | null {
     emailConfirmado: u.emailVerified,
     comSenha: provedores.includes('password'),
     comGoogle: provedores.includes('google.com'),
+    criadaEm: u.metadata.creationTime ? new Date(u.metadata.creationTime).toISOString() : null,
   }
 }
 

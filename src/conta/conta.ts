@@ -8,6 +8,8 @@ export type Usuario = {
   /** Entrou com e-mail e senha, com o Google, ou os dois. */
   comSenha: boolean
   comGoogle: boolean
+  /** Quando a conta foi criada (ISO). */
+  criadaEm: string | null
 }
 
 export type EstadoConta = {

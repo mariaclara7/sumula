@@ -35,7 +35,7 @@ export function PaginaSalas() {
   }
 
   const salas = [
-    ...(daConta.data ?? []).map((s) => ({ codigo: s.codigo, nome: s.nome, detalhe: `${s.pessoas}/5` })),
+    ...(daConta.data ?? []).map((s) => ({ codigo: s.codigo, nome: s.nome, detalhe: `${s.pessoas.length}/5` })),
     ...Object.entries(antigas)
       .filter(([codigo]) => !daConta.data?.some((s) => s.codigo === codigo))
       .sort(([, a], [, b]) => b.entrouEm.localeCompare(a.entrouEm))
