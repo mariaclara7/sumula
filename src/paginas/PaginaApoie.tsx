@@ -12,7 +12,7 @@ const VALORES = [5, 10, 20, 50]
 const USOS = [
   { titulo: 'Domínio', texto: 'brasumula.com.br, renovado todo ano' },
   { titulo: 'Dados', texto: 'dos jogos, para o site seguir atualizado' },
-  { titulo: 'Tempo', texto: 'para criar coisas novas, como o bolão nas salas' },
+  { titulo: 'Tempo', texto: 'para manter o site e criar novidades' },
 ]
 
 const PASSOS = ['Abra o app do seu banco e vá em Pix.', 'Escolha "Ler QR Code" ou "Pix Copia e Cola".', 'Confira o nome e o valor e confirme.']
