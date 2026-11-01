@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { useConta } from '../conta/conta'
 import { useTimes } from '../api/consultas'
 import { NOME_COMPETICAO, TEMPORADA } from '../config'
 import { usePreferencias } from '../preferencias'
@@ -43,6 +44,7 @@ export function Layout() {
           <div className="ml-auto flex items-center gap-2">
             <SeletorMeuTime />
             <BotaoTema />
+            <BotaoConta />
           </div>
         </Pagina>
         <Pagina>
@@ -119,8 +121,49 @@ function BotaoTema() {
         aria-hidden
         className={`size-3.5 rounded-full border-2 border-lima transition-colors duration-300 ${escuro ? 'bg-lima' : 'bg-transparent'}`}
       />
-      {/* Em celulares bem estreitos fica só a bolinha; o aria-label continua dizendo o que o botão faz. */}
-      <span className="hidden min-[360px]:inline">{escuro ? 'Claro' : 'Escuro'}</span>
+      {/* No celular fica só a bolinha (cabe o botão da conta); o aria-label continua dizendo o que o botão faz. */}
+      <span className="hidden sm:inline">{escuro ? 'Claro' : 'Escuro'}</span>
     </button>
+  )
+}
+
+/** "Entrar" para quem não tem conta; as iniciais, levando para a conta, para quem entrou. */
+function BotaoConta() {
+  const { carregando, usuario } = useConta()
+  const { pathname } = useLocation()
+  const classe =
+    'flex h-9 flex-none items-center gap-2 rounded-full border border-linha-escura text-xs font-bold text-creme transition-[border-color,transform] duration-200 hover:border-lima hover:text-creme active:scale-[.94]'
+
+  // Enquanto o Firebase carrega, guarda o lugar sem piscar "Entrar" para quem já está logado.
+  if (carregando) return <span aria-hidden className="h-9 w-9 flex-none rounded-full border border-linha-escura sm:w-[78px]" />
+
+  if (!usuario) {
+    const voltar = ['/entrar', '/criar-conta', '/esqueci-senha', '/conta'].includes(pathname) ? '' : `?voltar=${encodeURIComponent(pathname)}`
+    return (
+      <Link to={`/entrar${voltar}`} aria-label="Entrar ou criar conta" className={`${classe} px-2.5 sm:px-3`}>
+        <svg aria-hidden viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+        </svg>
+        <span className="hidden sm:inline">Entrar</span>
+      </Link>
+    )
+  }
+
+  const iniciais = usuario.nome
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p, i, todas) => (i === 0 || i === todas.length - 1 ? p[0] : ''))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+  return (
+    <Link to="/conta" aria-label={`Minha conta (${usuario.nome})`} className={`${classe} pr-1 pl-1 sm:pr-3`}>
+      <span aria-hidden className="grid size-7 place-items-center rounded-full bg-lima text-[11px] font-black text-grafite">
+        {iniciais}
+      </span>
+      <span className="hidden max-w-24 truncate sm:inline">{usuario.nome.split(/\s+/)[0]}</span>
+      {!usuario.emailConfirmado && <span aria-hidden className="size-2 rounded-full bg-laranja" title="Falta confirmar o e-mail" />}
+    </Link>
   )
 }

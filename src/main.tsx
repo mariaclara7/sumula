@@ -3,12 +3,15 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Layout } from './componentes/Layout'
+import { ProvedorConta } from './conta/ProvedorConta'
 import { ProvedorPreferencias } from './componentes/Preferencias'
 import './index.css'
 import { PaginaArtilharia } from './paginas/PaginaArtilharia'
 import { PaginaChances } from './paginas/PaginaChances'
 import { PaginaClassificacao } from './paginas/PaginaClassificacao'
 import { PaginaConfronto } from './paginas/PaginaConfronto'
+import { PaginaConta } from './paginas/PaginaConta'
+import { PaginaEntrar } from './paginas/PaginaEntrar'
 import { PaginaEstatisticas } from './paginas/PaginaEstatisticas'
 import { PaginaEvolucao } from './paginas/PaginaEvolucao'
 import { PaginaJogos } from './paginas/PaginaJogos'
@@ -28,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ProvedorPreferencias>
+        <ProvedorConta>
         <BrowserRouter>
           <Routes>
             <Route element={<Layout />}>
@@ -43,10 +47,15 @@ createRoot(document.getElementById('root')!).render(
               <Route path="tempos" element={<PaginaTempos />} />
               <Route path="confronto" element={<PaginaConfronto />} />
               <Route path="artilharia" element={<PaginaArtilharia />} />
+              <Route path="entrar" element={<PaginaEntrar modo="entrar" />} />
+              <Route path="criar-conta" element={<PaginaEntrar modo="criar" />} />
+              <Route path="esqueci-senha" element={<PaginaEntrar modo="esqueci" />} />
+              <Route path="conta" element={<PaginaConta />} />
               <Route path="*" element={<PaginaNaoEncontrada />} />
             </Route>
           </Routes>
         </BrowserRouter>
+        </ProvedorConta>
       </ProvedorPreferencias>
     </QueryClientProvider>
   </StrictMode>,
