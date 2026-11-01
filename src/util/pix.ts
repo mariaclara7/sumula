@@ -7,9 +7,9 @@
 export type DadosPix = {
   /** Chave Pix (de preferência a aleatória, para não expor CPF, telefone ou e-mail). */
   chave: string
-  /** Nome de quem recebe, como no banco (até 25 letras). */
+  /** Nome de quem recebe, como no banco (no código vai com até 25 letras; semAcentos encurta). */
   nome: string
-  /** Cidade de quem recebe (até 15 letras). */
+  /** Cidade de quem recebe (no código vai com até 15 letras). */
   cidade: string
 }
 
@@ -19,15 +19,30 @@ function campo(id: string, valor: string) {
   return `${id}${String(valor.length).padStart(2, '0')}${valor}`
 }
 
-/** O padrão aceita só letras sem acento e alguns símbolos nos campos de nome e cidade. */
+const LIGACOES = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
+
+/**
+ * O padrão aceita só letras sem acento e alguns símbolos nos campos de nome e cidade, com tamanho máximo. Se não
+ * couber, encurta como se faz em formulário: tira "de", "da", "dos"... do meio, depois troca os nomes do meio
+ * (do último para o primeiro) e o primeiro pela inicial, e só em último caso corta.
+ * Ex.: "Maria Clara Albino Delmonico" → "Maria Clara A Delmonico"; "Cornélio Procópio" → "C Procopio".
+ */
 export function semAcentos(texto: string, maximo: number) {
-  return texto
+  const limpo = texto
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^A-Za-z0-9 .,\-/]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, maximo)
+  let palavras = limpo.split(' ')
+  const cabe = () => palavras.join(' ').length <= maximo
+  if (!cabe()) palavras = palavras.filter((p, i) => i === 0 || i === palavras.length - 1 || !LIGACOES.has(p.toLowerCase()))
+  const ordem = [...Array.from({ length: Math.max(palavras.length - 2, 0) }, (_, i) => palavras.length - 2 - i), 0]
+  for (const i of ordem) {
+    if (cabe() || palavras.length < 2) break
+    palavras[i] = palavras[i].charAt(0)
+  }
+  return palavras.join(' ').slice(0, maximo)
 }
 
 /** CRC16-CCITT (polinômio 0x1021, começando em 0xFFFF), em 4 dígitos hexadecimais maiúsculos. */

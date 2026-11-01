@@ -24,9 +24,12 @@ describe('código Pix (BR Code estático)', () => {
     expect(comValor).toContain('540510.00')
   })
 
-  it('tira acentos e corta nome e cidade no tamanho do padrão', () => {
+  it('tira acentos e encurta nome e cidade até caber no tamanho do padrão', () => {
     expect(semAcentos('Maria Clara Adelmônico', 25)).toBe('Maria Clara Adelmonico')
-    expect(semAcentos('São José dos Campos', 15)).toBe('Sao Jose dos Ca')
+    expect(semAcentos('São José dos Campos', 15)).toBe('Sao Jose Campos')
+    expect(semAcentos('Maria Clara Albino Delmonico', 25)).toBe('Maria Clara A Delmonico')
+    expect(semAcentos('Cornélio Procópio', 15)).toBe('C Procopio')
+    expect(semAcentos('Florianópolis', 10)).toBe('Florianopo')
     expect(codigoPix({ chave: 'x', nome: 'Ção', cidade: 'Niterói' })).toContain('5903Cao6007Niteroi')
   })
 })
