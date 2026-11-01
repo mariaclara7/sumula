@@ -4,7 +4,18 @@ import { useEffect, useState } from 'react'
  * QR Code desenhado em SVG (quadradinhos pretos sobre branco, nos dois temas, para qualquer câmera ler).
  * A biblioteca é baixada só quando o QR aparece.
  */
-export function QrCode({ texto, rotulo, tamanho = 240 }: { texto: string; rotulo: string; tamanho?: number }) {
+export function QrCode({
+  texto,
+  rotulo,
+  tamanho = 240,
+  className = '',
+}: {
+  texto: string
+  rotulo: string
+  tamanho?: number
+  /** Para mudar o tamanho por tela (ex.: max-md:size-[132px]). */
+  className?: string
+}) {
   const [desenho, setDesenho] = useState<{ texto: string; lado: number; caminho: string } | null>(null)
 
   useEffect(() => {
@@ -27,7 +38,10 @@ export function QrCode({ texto, rotulo, tamanho = 240 }: { texto: string; rotulo
 
   const pronto = desenho?.texto === texto
   return (
-    <div className="grid place-items-center bg-white p-3" style={{ width: tamanho, height: tamanho }}>
+    <div
+      className={`grid size-(--lado) place-items-center bg-white p-2 ${className}`}
+      style={{ '--lado': `${tamanho}px` } as React.CSSProperties}
+    >
       {pronto ? (
         <svg role="img" aria-label={rotulo} viewBox={`-2 -2 ${desenho.lado + 4} ${desenho.lado + 4}`} className="size-full" shapeRendering="crispEdges">
           <path d={desenho.caminho} fill="#111111" />
