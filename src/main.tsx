@@ -7,6 +7,7 @@ import { ProvedorConta } from './conta/ProvedorConta'
 import { SincronizarMeuTime } from './conta/SincronizarMeuTime'
 import { ProvedorPreferencias } from './componentes/Preferencias'
 import './index.css'
+import { PaginaApoie } from './paginas/PaginaApoie'
 import { PaginaArtilharia } from './paginas/PaginaArtilharia'
 import { PaginaChances } from './paginas/PaginaChances'
 import { PaginaClassificacao } from './paginas/PaginaClassificacao'
@@ -55,6 +56,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="esqueci-senha" element={<PaginaEntrar modo="esqueci" />} />
               <Route path="conta" element={<PaginaConta />} />
               <Route path="privacidade" element={<PaginaPrivacidade />} />
+              <Route path="apoie" element={<PaginaApoie />} />
               <Route path="*" element={<PaginaNaoEncontrada />} />
             </Route>
           </Routes>

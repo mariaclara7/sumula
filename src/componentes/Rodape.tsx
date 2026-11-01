@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { AUTORIA, NOME_COMPETICAO, TEMPORADA } from '../config'
+import { AUTORIA, NOME_COMPETICAO, PIX, TEMPORADA } from '../config'
 import { Logo } from './Logo'
 import { Pagina } from './Pagina'
 
@@ -41,6 +41,14 @@ export function Rodape() {
             <Link to="/privacidade" className="underline hover:text-creme">
               Privacidade
             </Link>
+            {PIX && (
+              <>
+                {' · '}
+                <Link to="/apoie" className="font-bold text-lima underline hover:text-creme">
+                  Apoie ♥
+                </Link>
+              </>
+            )}
           </span>
           <span>
             Dados:{' '}

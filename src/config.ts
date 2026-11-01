@@ -14,6 +14,12 @@ export const AUTORIA: { nome: string; links: { rotulo: string; url: string }[] }
   ],
 }
 
+/**
+ * Pix para a página "Apoie" (/apoie). Enquanto estiver null, a página diz que o apoio ainda não está disponível e o
+ * link do rodapé não aparece. Use a chave aleatória, para não expor CPF, telefone ou e-mail.
+ */
+export const PIX: { chave: string; nome: string; cidade: string } | null = null
+
 export type Zona = {
   nome: string
   /** Posições da zona, inclusivas. */
