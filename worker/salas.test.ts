@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { tratarEu } from './eu'
+import { tratarListaEspera } from './listaEspera'
 import type { Partida } from '../src/api/tipos'
 import { codificarPalpites, decodificarPalpites } from '../src/util/codigoPalpites'
 import type { VerificarToken } from './firebase'
@@ -11,7 +12,7 @@ import { apagarSalasParadas, normalizarCodigo, tratarSalas } from './salas'
 function bancoDeTeste() {
   const sqlite = new DatabaseSync(':memory:')
   sqlite.exec('PRAGMA foreign_keys = ON')
-  for (const arquivo of ['0001_salas.sql', '0002_contas.sql'])
+  for (const arquivo of ['0001_salas.sql', '0002_contas.sql', '0003_lista_espera.sql'])
     sqlite.exec(readFileSync(new URL(`../migrations/${arquivo}`, import.meta.url), 'utf8'))
 
   const comando = (sql: string, valores: SQLInputValue[] = []) => ({
@@ -307,5 +308,28 @@ describe('/api/eu', () => {
     expect((await ver(a.codigo)).status).toBe(404) // a Maria estava sozinha
     expect((await ver(b.codigo)).sala.participantes.map((p) => p.nome)).toEqual(['Lucas'])
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM usuarios WHERE uid = 'maria'").get()).toEqual({ n: 0 })
+  })
+})
+
+describe('lista de espera do Pro', () => {
+  const pedirLista = (corpo: unknown) =>
+    tratarListaEspera(
+      new Request('https://brasumula.com.br/api/lista-espera', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }),
+      db,
+    )
+  const lista = () => sqlite.prepare('SELECT email, origem FROM lista_espera ORDER BY email').all()
+
+  it('guarda o e-mail uma vez, em minúsculas, sem dizer se já estava', async () => {
+    expect((await pedirLista({ email: ' Maria@Exemplo.com ', origem: 'cartola' })).status).toBe(201)
+    expect((await pedirLista({ email: 'maria@exemplo.com', origem: 'cartola' })).status).toBe(201)
+    expect(lista()).toEqual([{ email: 'maria@exemplo.com', origem: 'cartola' }])
+  })
+
+  it('recusa e-mail inválido e ignora robô', async () => {
+    expect((await pedirLista({ email: 'nao-e-email' })).status).toBe(400)
+    expect((await pedirLista({ email: `${'a'.repeat(250)}@x.com` })).status).toBe(400)
+    expect((await pedirLista({ email: 'robo@exemplo.com', site: 'http://spam' })).status).toBe(201)
+    expect((await pedirLista({ email: 'ana@exemplo.com', origem: '<script>' })).status).toBe(201)
+    expect(lista()).toEqual([{ email: 'ana@exemplo.com', origem: 'site' }])
   })
 })

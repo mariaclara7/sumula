@@ -9,6 +9,7 @@ import { ProvedorPreferencias } from './componentes/Preferencias'
 import './index.css'
 import { PaginaApoie } from './paginas/PaginaApoie'
 import { PaginaArtilharia } from './paginas/PaginaArtilharia'
+import { PaginaCartola } from './paginas/PaginaCartola'
 import { PaginaChances } from './paginas/PaginaChances'
 import { PaginaClassificacao } from './paginas/PaginaClassificacao'
 import { PaginaConfronto } from './paginas/PaginaConfronto'
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="simulador" element={<PaginaSimulador />} />
               <Route path="sala" element={<PaginaSalas />} />
               <Route path="sala/:codigo" element={<PaginaSala />} />
+              <Route path="cartola" element={<PaginaCartola />} />
               <Route path="chances" element={<PaginaChances />} />
               <Route path="estatisticas" element={<PaginaEstatisticas />} />
               <Route path="evolucao" element={<PaginaEvolucao />} />

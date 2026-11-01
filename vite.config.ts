@@ -11,6 +11,7 @@ export default defineConfig({
     proxy: {
       '/api/salas': 'http://localhost:8787',
       '/api/eu': 'http://localhost:8787',
+      '/api/lista-espera': 'http://localhost:8787',
       '/api': 'http://localhost:5080',
     },
   },

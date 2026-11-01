@@ -15,6 +15,7 @@ const LINKS = [
   { para: '/jogos', rotulo: 'Jogos' },
   { para: '/simulador', rotulo: 'Simulador' },
   { para: '/sala', rotulo: 'Sala' },
+  { para: '/cartola', rotulo: 'Cartola' },
   { para: '/chances', rotulo: 'Chances' },
   { para: '/estatisticas', rotulo: 'Estatísticas' },
   { para: '/evolucao', rotulo: 'Evolução' },

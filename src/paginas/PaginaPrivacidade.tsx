@@ -105,6 +105,10 @@ export function PaginaPrivacidade() {
               pessoa veio, o país e o tipo de aparelho e de navegador.
             </p>
             <p className="mt-3">
+              Se você pede para ser avisado do <b>BraSúmula Pro</b> (na página Cartola), guardamos só o e-mail que você
+              digitou, a página de onde veio e a data, com ou sem conta. Esse e-mail serve só para esse aviso.
+            </p>
+            <p className="mt-3">
               Não pedimos CPF, telefone, endereço, data de nascimento ou foto, e não guardamos o seu histórico de navegação.
             </p>
           </Secao>
@@ -117,11 +121,13 @@ export function PaginaPrivacidade() {
                 'Para lembrar o seu time do coração em qualquer aparelho.',
                 'Para a segurança do site, como bloquear tentativas repetidas de adivinhar senhas (feito pelo Firebase).',
                 'Para entender, em números gerais e sem identificar ninguém, quais páginas são mais usadas e melhorar o site.',
+                'Para avisar por e-mail, uma vez, quem pediu para saber quando o BraSúmula Pro abrir.',
               ]}
             />
             <p className="mt-4">
               Esses usos se baseiam na execução do serviço que você pediu ao criar a conta (art. 7º, V, da LGPD) e, no caso
               da segurança e da contagem anônima de visitas, no legítimo interesse de proteger as contas e melhorar o site (art. 7º, IX).
+              O e-mail do aviso do Pro é guardado com o seu consentimento (art. 7º, I), que você pode retirar quando quiser.
             </p>
           </Secao>
 
@@ -153,6 +159,10 @@ export function PaginaPrivacidade() {
                 'Enquanto a sua conta existir.',
                 'Salas sem nenhuma mudança por 60 dias são apagadas automaticamente, com os palpites.',
                 'Ao excluir a conta, ela é apagada do Firebase na hora, e você sai de todas as salas: o seu time do coração e os seus palpites são apagados do nosso banco.',
+                <>
+                  O e-mail do aviso do Pro fica guardado até o aviso ser enviado ou até você pedir para sair, escrevendo para{' '}
+                  <Email />.
+                </>,
               ]}
             />
           </Secao>

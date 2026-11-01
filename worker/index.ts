@@ -1,4 +1,5 @@
 import { tratarEu } from './eu'
+import { tratarListaEspera } from './listaEspera'
 import { criarVerificador } from './firebase'
 import type { Partida } from '../src/api/tipos'
 import { montarEndereco } from '../src/api/rotas'
@@ -52,6 +53,7 @@ export default {
     const ctx = { db: env.DB, verificar: criarVerificador(env.FIREBASE_PROJECT_ID), partidas: buscarPartidas(env) }
     if (pathname === '/api/salas' || pathname.startsWith('/api/salas/')) return tratarSalas(request, ctx)
     if (pathname === '/api/eu') return tratarEu(request, ctx)
+    if (pathname === '/api/lista-espera') return tratarListaEspera(request, env.DB)
     if (pathname.startsWith('/api/')) return Response.json({ erro: 'Endereço não encontrado.' }, { status: 404 })
     return env.ASSETS.fetch(request)
   },
