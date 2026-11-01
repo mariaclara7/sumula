@@ -10,12 +10,13 @@ import { Pagina } from './Pagina'
 import { Rodape } from './Rodape'
 import { Seletor } from './Seletor'
 
-const LINKS = [
+/** `novo`: ganha o selo "NOVO" ao lado do nome. */
+const LINKS: { para: string; rotulo: string; novo?: boolean }[] = [
   { para: '/', rotulo: 'Classificação' },
+  { para: '/cartola', rotulo: 'Cartola', novo: true },
   { para: '/jogos', rotulo: 'Jogos' },
   { para: '/simulador', rotulo: 'Simulador' },
   { para: '/sala', rotulo: 'Sala' },
-  { para: '/cartola', rotulo: 'Cartola' },
   { para: '/chances', rotulo: 'Chances' },
   { para: '/estatisticas', rotulo: 'Estatísticas' },
   { para: '/evolucao', rotulo: 'Evolução' },
@@ -57,12 +58,17 @@ export function Layout() {
                 // /sala fica marcado também dentro de uma sala (/sala/K7P-2QX).
                 end={link.para !== '/sala'}
                 className={({ isActive }) =>
-                  `inclinado flex-none px-3.5 py-2 text-sm font-bold transition-[background-color,color,transform] duration-200 hover:-translate-y-px ${
-                    isActive ? 'bg-lima text-grafite hover:text-grafite' : 'text-cinza hover:text-creme'
+                  `inclinado group flex flex-none items-center gap-1.5 px-3.5 py-2 text-sm font-bold transition-[background-color,color,transform] duration-200 hover:-translate-y-px ${
+                    isActive ? 'bg-lima text-grafite hover:text-grafite' : link.novo ? 'text-creme' : 'text-cinza hover:text-creme'
                   }`
                 }
               >
                 {link.rotulo}
+                {link.novo && (
+                  <span className="bg-lima px-1 py-px font-mono text-[9px] leading-normal font-extrabold tracking-[.5px] text-grafite group-aria-[current=page]:bg-grafite group-aria-[current=page]:text-lima">
+                    NOVO
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>
