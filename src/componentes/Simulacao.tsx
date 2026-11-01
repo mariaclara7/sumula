@@ -93,6 +93,8 @@ type PropsJogo = {
   corPlacar?: { fundo: string; texto: string }
   /** Conteúdo extra embaixo do jogo (os palpites dos outros na sala). */
   children?: ReactNode
+  /** Bolão da sala: o jogo já começou e o palpite não muda mais. */
+  fechado?: boolean
 }
 
 const ESTADO: Partial<Record<Partida['status'], string>> = {
@@ -112,8 +114,9 @@ export function JogoDoSimulador({
   rotulo,
   corPlacar,
   children,
+  fechado = false,
 }: PropsJogo) {
-  const editavel = podePalpitar(partida) && !somenteLeitura && aoAlterar !== undefined
+  const editavel = podePalpitar(partida) && !fechado && !somenteLeitura && aoAlterar !== undefined
   const palpitado = podePalpitar(partida) && palpite?.mandante != null && palpite.visitante != null
   const encerrado = partida.temResultado
   const coloridoPelaPessoa = !encerrado && palpitado && corPlacar
@@ -127,7 +130,9 @@ export function JogoDoSimulador({
         <span className="truncate">
           {encerrado
             ? '🔒 Encerrado'
-            : (ESTADO[partida.status] ?? rotulo ?? (somenteLeitura ? 'Palpite compartilhado' : 'Seu palpite'))}
+            : fechado && partida.status !== 'cancelada'
+              ? `🔒 ${partida.status === 'emAndamento' ? 'Ao vivo' : 'Já começou'} · palpite fechado`
+              : (ESTADO[partida.status] ?? rotulo ?? (somenteLeitura ? 'Palpite compartilhado' : 'Seu palpite'))}
         </span>
       </div>
       <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">

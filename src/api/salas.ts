@@ -98,7 +98,16 @@ export function vincularParticipacao(codigo: string, chave: string) {
   return pedirApi<{ id: number }>('POST', `${BASE}/${codigo}/vincular`, { extra: { 'X-Chave-Sala': chave } })
 }
 
-export type MinhaSala = { codigo: string; nome: string; meusPalpites: string; pessoas: { nome: string; cor: number }[] }
+export type MinhaSala = {
+  codigo: string
+  nome: string
+  temporada: number
+  /** O id da conta nesta sala. */
+  meuId: number
+  meusPalpites: string
+  /** Quem está na sala, com os palpites (para a posição no bolão). */
+  pessoas: { id: number; nome: string; cor: number; palpites: string }[]
+}
 
 export function minhasSalasDaConta() {
   return pedirApi<MinhaSala[]>('GET', BASE)

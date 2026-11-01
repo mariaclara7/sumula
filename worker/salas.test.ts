@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { tratarEu } from './eu'
+import type { Partida } from '../src/api/tipos'
+import { codificarPalpites, decodificarPalpites } from '../src/util/codigoPalpites'
 import type { VerificarToken } from './firebase'
 import { apagarSalasParadas, normalizarCodigo, tratarSalas } from './salas'
 
@@ -45,11 +47,21 @@ const verificar: VerificarToken = async (t) => {
   return tipo === 'conta' ? { uid, nome: '', emailConfirmado: confirmado === 'ok' } : null
 }
 
+// Os jogos que a API confere na trava do horário (cada teste pode trocar).
+let jogos: Partida[] = []
+let dadosForaDoAr = false
+const buscarPartidas = async () => {
+  if (dadosForaDoAr) throw new Error('fora do ar')
+  return jogos
+}
+
 let db: D1Database
 let sqlite: DatabaseSync
 
 beforeEach(() => {
   ;({ db, sqlite } = bancoDeTeste())
+  jogos = []
+  dadosForaDoAr = false
 })
 
 type Opcoes = { corpo?: unknown; conta?: string; etag?: string; chaveSala?: string; tokenCru?: string }
@@ -66,7 +78,8 @@ function pedir(metodo: string, caminho: string, { corpo, conta, etag, chaveSala,
     headers,
     body: corpo === undefined ? undefined : typeof corpo === 'string' ? corpo : JSON.stringify(corpo),
   })
-  return caminho.startsWith('/api/eu') ? tratarEu(request, { db, verificar }) : tratarSalas(request, { db, verificar })
+  const ctx = { db, verificar, partidas: buscarPartidas }
+  return caminho.startsWith('/api/eu') ? tratarEu(request, ctx) : tratarSalas(request, ctx)
 }
 
 async function criar(conta = 'maria', nome = 'Os Brothers', seuNome = 'Maria') {
@@ -143,6 +156,48 @@ describe('salas com conta', () => {
     expect((await ver(codigo)).sala.participantes.find((p) => p.id === maria.id)?.palpites).toBe('1.a-21')
   })
 
+  it('não deixa mudar palpite de jogo que já começou (bolão)', async () => {
+    const { codigo, participante: maria } = await criar()
+    const hora = 3_600_000
+    const jogo = (id: number, daqui: number): Partida => ({
+      id,
+      rodada: 33,
+      data: new Date(Date.now() + daqui).toISOString(),
+      status: 'agendada',
+      mandanteId: 1,
+      visitanteId: 2,
+      golsMandante: null,
+      golsVisitante: null,
+      golsMandanteIntervalo: null,
+      golsVisitanteIntervalo: null,
+      temResultado: false,
+    })
+    jogos = [jogo(10, -hora), jogo(11, hora)]
+    const gravar = (palpites: Record<number, { mandante: number; visitante: number }>) =>
+      pedir('PUT', `/api/salas/${codigo}/participantes/${maria.id}/palpites`, {
+        conta: 'maria',
+        corpo: { palpites: codificarPalpites(palpites) ?? '' },
+      })
+
+    // O jogo 10 já começou: não dá para incluir palpite nele; no 11 (daqui a uma hora), dá.
+    expect((await gravar({ 10: { mandante: 2, visitante: 1 } })).status).toBe(409)
+    expect((await gravar({ 11: { mandante: 1, visitante: 1 } })).status).toBe(204)
+
+    // Com um palpite já guardado no 10 (de antes de começar), ele não pode mudar nem sumir.
+    sqlite.prepare('UPDATE participantes SET palpites = ? WHERE id = ?').run(codificarPalpites({ 10: { mandante: 2, visitante: 1 } })!, maria.id)
+    expect((await gravar({ 10: { mandante: 3, visitante: 0 } })).status).toBe(409)
+    expect((await gravar({ 11: { mandante: 0, visitante: 0 } })).status).toBe(409)
+    expect((await gravar({ 10: { mandante: 2, visitante: 1 }, 11: { mandante: 0, visitante: 0 } })).status).toBe(204)
+    expect(decodificarPalpites((await ver(codigo)).sala.participantes[0].palpites)).toEqual({
+      10: { mandante: 2, visitante: 1 },
+      11: { mandante: 0, visitante: 0 },
+    })
+
+    // Sem os dados dos jogos, não grava às cegas.
+    dadosForaDoAr = true
+    expect((await gravar({ 10: { mandante: 2, visitante: 1 } })).status).toBe(503)
+  })
+
   it('a conta descobre quem é na sala e lista as suas salas', async () => {
     const a = await criar('maria', 'Sala A')
     const b = await criar('lucas', 'Sala B', 'Lucas')
@@ -156,13 +211,14 @@ describe('salas com conta', () => {
     const minhas = (await (await pedir('GET', '/api/salas', { conta: 'maria' })).json()) as {
       codigo: string
       meusPalpites: string
-      pessoas: { nome: string; cor: number }[]
+      pessoas: { id: number; nome: string; cor: number; palpites: string }[]
     }[]
     expect(minhas.map((s) => s.codigo).sort()).toEqual([a.codigo, b.codigo].sort())
     expect(minhas.find((s) => s.codigo === b.codigo)?.pessoas).toEqual([
-      { nome: 'Lucas', cor: 0 },
-      { nome: 'Maria', cor: 1 },
+      { id: b.participante.id, nome: 'Lucas', cor: 0, palpites: '' },
+      { id: expect.any(Number), nome: 'Maria', cor: 1, palpites: '' },
     ])
+    expect(minhas.find((s) => s.codigo === a.codigo)).toMatchObject({ temporada: 2026, meuId: a.participante.id })
     expect(minhas.find((s) => s.codigo === a.codigo)?.meusPalpites).toBe('1.a-21')
   })
 

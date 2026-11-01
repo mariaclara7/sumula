@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
-import { useTimes } from '../api/consultas'
-import { minhasSalasDaConta } from '../api/salas'
+import { usePartidas, useTimes } from '../api/consultas'
+import { minhasSalasDaConta, type MinhaSala } from '../api/salas'
+import type { Partida } from '../api/tipos'
 import { confirmarIdentidade, esqueciSenha, excluirConta, mudarNome, reenviarConfirmacao, sair } from '../conta/acoes'
 import { mensagemDeErro, useConta, type Usuario } from '../conta/conta'
 import { classeCampo } from '../conta/estilos'
@@ -15,6 +16,7 @@ import { Pagina } from '../componentes/Pagina'
 import { TituloPagina } from '../componentes/TituloPagina'
 import { useConfirmacao } from '../componentes/useConfirmacao'
 import { usePreferencias } from '../preferencias'
+import { calcularBolao, rodadaDeInicio } from '../util/bolao'
 import { decodificarPalpites } from '../util/compartilhar'
 import { coresDoTime } from '../util/cores'
 import { corDoParticipante, formatarCodigo, iniciais } from '../util/salas'
@@ -491,6 +493,7 @@ function Preferencias({ usuario }: { usuario: Usuario }) {
 
 function MinhasSalas({ uid }: { uid: string }) {
   const salas = useQuery({ queryKey: ['minhas-salas', uid], queryFn: minhasSalasDaConta })
+  const partidas = usePartidas()
 
   return (
     <Cartao
@@ -519,6 +522,7 @@ function MinhasSalas({ uid }: { uid: string }) {
                   <span className="mt-0.5 block font-mono text-xs text-texto-2">
                     {formatarCodigo(sala.codigo)} · {sala.pessoas.length}/5 pessoas
                   </span>
+                  {partidas.data && <PosicaoNoBolao sala={sala} partidas={partidas.data} />}
                 </span>
                 <span className="flex pl-1.5">
                   {sala.pessoas.map((p) => {
@@ -544,6 +548,25 @@ function MinhasSalas({ uid }: { uid: string }) {
         </ul>
       )}
     </Cartao>
+  )
+}
+
+/** "🏆 2º de 4 · 19 pts" (👑 para quem lidera), quando o bolão da sala já tem pontos. */
+function PosicaoNoBolao({ sala, partidas }: { sala: MinhaSala; partidas: Partida[] }) {
+  const desde = rodadaDeInicio(partidas, sala.temporada)
+  const bolao = calcularBolao(
+    partidas,
+    sala.pessoas.map((p) => ({ id: p.id, palpites: decodificarPalpites(p.palpites || null) ?? {} })),
+    desde,
+  )
+  const eu = bolao.ranking.find((l) => l.id === sala.meuId)
+  if (!eu || bolao.jogosContados === 0) return null
+  return (
+    <span className="mt-2 inline-flex items-center gap-2 bg-grafite px-2 py-1 font-mono text-[11px] font-extrabold text-lima">
+      <span aria-hidden>{eu.posicao === 1 ? '👑' : '🏆'}</span>
+      {eu.posicao}º DE {bolao.ranking.length} · {eu.pontos} {eu.pontos === 1 ? 'PT' : 'PTS'}
+      <span className="sr-only"> no bolão</span>
+    </span>
   )
 }
 

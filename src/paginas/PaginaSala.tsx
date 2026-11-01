@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { usePalpites, usePartidas, useTimes } from '../api/consultas'
 import {
   entrarNaSala,
@@ -15,6 +15,7 @@ import {
 } from '../api/salas'
 import type { LinhaClassificacao, Palpite, Partida, Time } from '../api/tipos'
 import { Abas } from '../componentes/Abas'
+import { AvatarParticipante as Avatar } from '../componentes/AvatarParticipante'
 import { Escudo } from '../componentes/Escudo'
 import { BotaoPrincipal, Carregando, Erro, Vazio } from '../componentes/Estado'
 import { LegendaZonas } from '../componentes/LegendaZonas'
@@ -26,7 +27,8 @@ import { useConta } from '../conta/conta'
 import { ZONAS, zonaDaPosicao } from '../config'
 import { calcularClassificacao } from '../util/classificacao'
 import { codificarPalpites, decodificarPalpites } from '../util/compartilhar'
-import { corDoParticipante, esquecerParticipacao, formatarCodigo, iniciais, lerCodigo, lerMinhasSalas } from '../util/salas'
+import { calcularBolao, jogoFechado, manterFechados, pontosDoPalpite, rodadaDeInicio } from '../util/bolao'
+import { corDoParticipante, esquecerParticipacao, formatarCodigo, lerCodigo, lerMinhasSalas } from '../util/salas'
 import {
   acertoDoPalpite,
   jogosDaSimulacao,
@@ -41,6 +43,7 @@ import {
   type PlacarDigitado,
 } from '../util/simulador'
 import { Sigla } from '../componentes/Sigla'
+import { BolaoDaSala } from '../componentes/BolaoDaSala'
 
 const MAXIMO = 5
 const libertadores = ZONAS.find((z) => z.nome === 'Libertadores')!
@@ -163,7 +166,14 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   // O rascunho é o que está nos campos, inclusive placar pela metade (um lado só). Para a sala vão só os jogos com
   // os dois lados (o formato do link de compartilhar), então o rascunho continua valendo na tela depois de gravar:
   // se a tela passasse a mostrar o que voltou da sala, o número digitado sumiria.
-  const [rascunho, setRascunho] = useState<PalpitesUsuario | null>(null)
+  const [rascunhoDigitado, setRascunho] = useState<PalpitesUsuario | null>(null)
+  // Bolão: jogo que já começou volta ao que está gravado (o servidor recusa mudar depois da hora).
+  const agora = useAgora()
+  const salvoNaSala = useMemo<PalpitesUsuario>(() => decodificarPalpites(eu?.palpites ?? '') ?? {}, [eu?.palpites])
+  const rascunho = useMemo(
+    () => rascunhoDigitado && manterFechados(partidas, salvoNaSala, rascunhoDigitado, agora),
+    [rascunhoDigitado, partidas, salvoNaSala, agora],
+  )
   // O que esta aba gravou por último (null: ainda nada; vale o que está na sala).
   const [gravado, setGravado] = useState<string | null>(null)
   const [tentativa, setTentativa] = useState(0)
@@ -199,6 +209,14 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
           setGravado(codigoRascunho)
           setErroAoSalvar(null)
         } catch (erro) {
+          if (erro instanceof ErroSala && erro.status === 409) {
+            // Um jogo começou enquanto a tela estava aberta: volta para o que está na sala.
+            setRascunho(null)
+            setGravado(null)
+            setAviso(erro.message)
+            queryClient.invalidateQueries({ queryKey: ['sala', sala.codigo] })
+            return
+          }
           if (erro instanceof ErroSala && erro.status === 403) {
             // Saiu ou foi removida da sala (por exemplo, em outro aparelho).
             setRascunho(null)
@@ -227,7 +245,8 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   }, [pendente])
 
   // ----- tabela de cada pessoa -----
-  const restantes = useMemo(() => partidas.filter(podePalpitar), [partidas])
+  // Jogos ainda abertos para palpite (sem resultado e antes da hora de começar).
+  const restantes = useMemo(() => partidas.filter((p) => podePalpitar(p) && !jogoFechado(p, agora)), [partidas, agora])
   const real = useMemo(() => calcularClassificacao(times.lista, jogosDaSimulacao(partidas, {})), [partidas, times.lista])
   const posicaoReal = useMemo(() => new Map(real.map((l) => [l.time.id, l.posicao])), [real])
 
@@ -250,7 +269,26 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   const selecionado =
     simulados.find((s) => s.participante.id === escolhido) ?? simulados.find((s) => s.participante.id === eu?.id) ?? simulados[0]
   const ehEu = selecionado?.participante.id === eu?.id
-  const [visao, setVisao] = useState<'palpites' | 'comparar'>('palpites')
+  // A aba do bolão tem link próprio (?aba=bolao), para mandar o ranking no grupo.
+  const [busca, setBusca] = useSearchParams()
+  const visao: Visao = busca.get('aba') === 'bolao' ? 'bolao' : busca.get('aba') === 'comparar' ? 'comparar' : 'palpites'
+  function setVisao(nova: Visao) {
+    setBusca(
+      (atual) => {
+        const proxima = new URLSearchParams(atual)
+        if (nova === 'palpites') proxima.delete('aba')
+        else proxima.set('aba', nova)
+        return proxima
+      },
+      { replace: true },
+    )
+  }
+
+  const desde = useMemo(() => rodadaDeInicio(partidas, sala.temporada), [partidas, sala.temporada])
+  const bolao = useMemo(
+    () => calcularBolao(partidas, simulados.map((s) => ({ id: s.participante.id, palpites: s.palpites })), desde),
+    [partidas, simulados, desde],
+  )
 
   const rodadas = useMemo(() => [...new Set(partidas.map((p) => p.rodada))].sort((a, b) => a - b), [partidas])
   const [rodada, setRodada] = useState(() => rodadaInicial(partidas))
@@ -448,6 +486,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
               opcoes={[
                 { valor: 'palpites', rotulo: 'Palpites e tabela' },
                 { valor: 'comparar', rotulo: 'Comparar tabelas' },
+                { valor: 'bolao', rotulo: 'Bolão' },
               ]}
             />
             {!eu && (
@@ -462,7 +501,18 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
             )}
           </div>
 
-          {visao === 'comparar' ? (
+          {visao === 'bolao' ? (
+            <BolaoDaSala
+              bolao={bolao}
+              partidas={partidas}
+              participantes={sala.participantes}
+              euId={eu?.id}
+              agora={agora}
+              link={`${linkConvite}?aba=bolao`}
+              aoPalpitar={eu ? () => setVisao('palpites') : undefined}
+              aoCopiar={(url) => copiar(`Ranking do bolão da sala "${sala.nome}" na BraSúmula:`, url, 'Link do bolão copiado! É só colar no grupo.')}
+            />
+          ) : visao === 'comparar' ? (
             <Comparar simulados={simulados} posicaoReal={posicaoReal} times={times.lista} euId={eu?.id} />
           ) : (
             selecionado && (
@@ -522,13 +572,13 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                             <span aria-hidden className="border border-verde bg-verde px-1 font-mono text-[10px] font-bold text-white">
                               ✓✓
                             </span>
-                            cravou o placar
+                            cravou o placar{desde !== null && rodada >= desde && ' (+3)'}
                           </span>
                           <span className="flex items-center gap-1">
                             <span aria-hidden className="border border-verde px-1 font-mono text-[10px] font-bold text-verde">
                               ✓
                             </span>
-                            acertou o resultado
+                            acertou o resultado{desde !== null && rodada >= desde && ' (+1)'}
                           </span>
                         </span>
                       ) : (
@@ -559,11 +609,17 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
                               aoAlterar={ehEu ? (lado, texto) => alterar(partida.id, lado, texto) : undefined}
                               rotulo={ehEu ? 'Seu palpite' : `Palpite de ${selecionado.participante.nome}`}
                               corPlacar={ehEu ? undefined : corDoParticipante(selecionado.participante.cor)}
+                              fechado={jogoFechado(partida, agora)}
                             >
                               {partida.temResultado ? (
-                                <PalpitesDoJogo partida={partida} simulados={[selecionado, ...outros]} euId={eu?.id} />
+                                <PalpitesDoJogo
+                                  partida={partida}
+                                  simulados={[selecionado, ...outros]}
+                                  euId={eu?.id}
+                                  valendo={desde !== null && partida.rodada >= desde}
+                                />
                               ) : (
-                                podePalpitar(partida) &&
+                                partida.status !== 'cancelada' &&
                                 outros.length > 0 && <PalpitesDosOutros partidaId={partida.id} outros={outros} euId={eu?.id} />
                               )}
                             </JogoDoSimulador>
@@ -798,19 +854,6 @@ function Entrar({
   )
 }
 
-function Avatar({ participante, tamanho }: { participante: ParticipanteSala; tamanho: number }) {
-  const cor = corDoParticipante(participante.cor)
-  return (
-    <span
-      aria-hidden
-      className="grid flex-none place-items-center rounded-full font-black"
-      style={{ width: tamanho, height: tamanho, background: cor.fundo, color: cor.texto, fontSize: Math.round(tamanho * 0.36) }}
-    >
-      {iniciais(participante.nome)}
-    </span>
-  )
-}
-
 function AbaParticipante({
   simulado,
   total,
@@ -901,7 +944,18 @@ const ESTILO_ACERTO: Record<Acerto, { classe: string; texto: string; marca: stri
 }
 
 /** Jogo encerrado: o palpite que cada um tinha feito, marcado se cravou o placar ou acertou o resultado. */
-function PalpitesDoJogo({ partida, simulados, euId }: { partida: Partida; simulados: Simulado[]; euId: number | undefined }) {
+function PalpitesDoJogo({
+  partida,
+  simulados,
+  euId,
+  valendo,
+}: {
+  partida: Partida
+  simulados: Simulado[]
+  euId: number | undefined
+  /** O jogo conta no bolão: mostra os pontos de cada um. */
+  valendo: boolean
+}) {
   return (
     <div className="mt-2 border-t border-dashed border-borda pt-2">
       <div className="text-center font-mono text-[10px] font-extrabold tracking-[1.5px] text-texto-2">PALPITES</div>
@@ -911,10 +965,12 @@ function PalpitesDoJogo({ partida, simulados, euId }: { partida: Partida; simula
           const acerto = acertoDoPalpite(partida, p)
           const nome = s.participante.id === euId ? 'Você' : s.participante.nome
           const estilo = acerto ? ESTILO_ACERTO[acerto] : null
+          const pontos = valendo ? (pontosDoPalpite(partida, p) ?? 0) : null
+          const textoPontos = pontos === null ? '' : `, ${pontos} ${pontos === 1 ? 'ponto' : 'pontos'}`
           return (
             <li
               key={s.participante.id}
-              title={`${nome}: ${acerto ? `${p!.mandante} × ${p!.visitante}, ${estilo!.texto}` : 'sem palpite'}`}
+              title={`${nome}: ${acerto ? `${p!.mandante} × ${p!.visitante}, ${estilo!.texto}` : 'sem palpite'}${textoPontos}`}
               className={`flex items-center gap-1.5 border py-0.5 pr-1.5 pl-0.5 font-mono text-[11px] font-bold ${
                 estilo ? estilo.classe : 'border-transparent text-texto-3'
               }`}
@@ -923,7 +979,15 @@ function PalpitesDoJogo({ partida, simulados, euId }: { partida: Partida; simula
               <span className="sr-only">{nome}:</span>
               {acerto ? `${p!.mandante}×${p!.visitante}` : '—'}
               {estilo?.marca && <span aria-hidden>{estilo.marca}</span>}
-              <span className="sr-only">{estilo ? `, ${estilo.texto}` : 'sem palpite'}</span>
+              {pontos !== null && (
+                <span aria-hidden className="ml-0.5 border-l border-current pl-1 font-extrabold">
+                  {pontos > 0 ? `+${pontos}` : '0'}
+                </span>
+              )}
+              <span className="sr-only">
+                {estilo ? `, ${estilo.texto}` : 'sem palpite'}
+                {textoPontos}
+              </span>
             </li>
           )
         })}
@@ -1032,3 +1096,15 @@ function CelulaPosicao({ posicao }: { posicao: number }) {
   )
 }
 
+
+type Visao = 'palpites' | 'comparar' | 'bolao'
+
+/** A hora atual, renovada de tempos em tempos (para travar o palpite quando o jogo começa com a tela aberta). */
+function useAgora(intervalo = 30_000) {
+  const [agora, setAgora] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setAgora(Date.now()), intervalo)
+    return () => clearInterval(timer)
+  }, [intervalo])
+  return agora
+}

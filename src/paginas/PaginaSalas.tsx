@@ -2,11 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { criarSala, ErroSala, gravarPalpitesNaSala, minhasSalasDaConta } from '../api/salas'
+import { usePartidas } from '../api/consultas'
 import { useConta } from '../conta/conta'
 import { Pagina } from '../componentes/Pagina'
 import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { COMPETICAO, TEMPORADA } from '../config'
 import { formatarCodigo, lerCodigo, lerMinhasSalas } from '../util/salas'
+import { manterFechados } from '../util/bolao'
 import { codificarPalpites } from '../util/compartilhar'
 import { palpitesDoSimulador } from '../util/simulador'
 
@@ -127,6 +129,7 @@ function FormularioCriar({ aoCriar }: { aoCriar: (codigo: string) => void }) {
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const quantosNoSimulador = Object.keys(doSimulador).length
+  const partidas = usePartidas()
 
   async function criar(evento: FormEvent) {
     evento.preventDefault()
@@ -139,7 +142,9 @@ function FormularioCriar({ aoCriar }: { aoCriar: (codigo: string) => void }) {
         competicao: COMPETICAO,
         temporada: TEMPORADA,
       })
-      const codigoPalpites = trazer ? codificarPalpites(doSimulador) : null
+      // Só os jogos que ainda não começaram: o palpite de jogo que já começou não entra mais (bolão).
+      const abertos = partidas.data ? manterFechados(partidas.data, {}, doSimulador, Date.now()) : doSimulador
+      const codigoPalpites = trazer ? codificarPalpites(abertos) : null
       // Se falhar, a sala já existe e os palpites podem ser trazidos lá dentro.
       if (codigoPalpites) await gravarPalpitesNaSala(codigo, participante.id, codigoPalpites).catch(() => {})
       queryClient.invalidateQueries({ queryKey: ['minhas-salas'] })

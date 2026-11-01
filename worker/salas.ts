@@ -14,9 +14,13 @@
  *   GET    /api/salas/:codigo/eu                       quem a conta é nesta sala
  *   POST   /api/salas/:codigo/vincular                 liga a participação antiga (X-Chave-Sala) à conta
  *   PUT    /api/salas/:codigo/participantes/:id/palpites  grava os palpites        { palpites }
+ *          (recusa mudar o palpite de jogo que já começou: confere o horário nos dados dos jogos)
  *   DELETE /api/salas/:codigo/participantes/:id        sai da sala ou remove alguém (só o dono remove outros)
  */
 
+import type { Partida } from '../src/api/tipos'
+import { palpitesMexidosEmJogosFechados } from '../src/util/bolao'
+import { decodificarPalpites } from '../src/util/codigoPalpites'
 import type { Identidade, VerificarToken } from './firebase'
 export const MAXIMO_PARTICIPANTES = 5
 export const TAMANHO_NOME_PESSOA = 20
@@ -50,7 +54,10 @@ export class ErroHttp extends Error {
   }
 }
 
-export type Contexto = { db: D1Database; verificar: VerificarToken }
+/** Os jogos da competição (dos dados públicos do site), para conferir a trava do horário. */
+export type BuscarPartidas = (competicao: string, temporada: number) => Promise<Partida[]>
+
+export type Contexto = { db: D1Database; verificar: VerificarToken; partidas: BuscarPartidas }
 
 export async function tratarSalas(request: Request, ctx: Contexto): Promise<Response> {
   try {
@@ -94,28 +101,31 @@ async function rotear(request: Request, ctx: Contexto): Promise<Response> {
   throw new ErroHttp(404, 'Endereço não encontrado.')
 }
 
-/** As salas da conta, com quem está em cada uma (nome e cor, para as bolinhas) e os palpites da própria pessoa. */
+/**
+ * As salas da conta, com quem está em cada uma (nome e cor, para as bolinhas; id e palpites, para a posição no
+ * bolão) e os palpites da própria pessoa. São os mesmos dados que qualquer um vê abrindo a sala pelo link.
+ */
 async function minhasSalas(request: Request, ctx: Contexto) {
   const conta = await exigirConta(request, ctx)
   const { results: salas } = await ctx.db
     .prepare(
-      `SELECT s.codigo, s.nome, p.palpites AS meusPalpites
+      `SELECT s.codigo, s.nome, s.temporada, p.id AS meuId, p.palpites AS meusPalpites
        FROM participantes p JOIN salas s ON s.codigo = p.sala
        WHERE p.uid = ? ORDER BY s.atualizada_em DESC`,
     )
     .bind(conta.uid)
-    .all<{ codigo: string; nome: string; meusPalpites: string }>()
+    .all<{ codigo: string; nome: string; temporada: number; meuId: number; meusPalpites: string }>()
   const { results: pessoas } = await ctx.db
     .prepare(
-      `SELECT sala, nome, cor FROM participantes
+      `SELECT sala, id, nome, cor, palpites FROM participantes
        WHERE sala IN (SELECT sala FROM participantes WHERE uid = ?) ORDER BY id`,
     )
     .bind(conta.uid)
-    .all<{ sala: string; nome: string; cor: number }>()
+    .all<{ sala: string; id: number; nome: string; cor: number; palpites: string }>()
   return json(
     salas.map((s) => ({
       ...s,
-      pessoas: pessoas.filter((p) => p.sala === s.codigo).map(({ nome, cor }) => ({ nome, cor })),
+      pessoas: pessoas.filter((p) => p.sala === s.codigo).map(({ id, nome, cor, palpites }) => ({ id, nome, cor, palpites })),
     })),
   )
 }
@@ -262,6 +272,22 @@ async function gravarPalpites(request: Request, ctx: Contexto, codigo: string, i
   const palpites = corpo.palpites
   if (typeof palpites !== 'string' || palpites.length > MAIOR_PALPITES || !FORMATO_PALPITES.test(palpites))
     throw new ErroHttp(400, 'Palpites em formato inválido.')
+  const depois = palpites ? decodificarPalpites(palpites) : {}
+  if (!depois) throw new ErroHttp(400, 'Palpites em formato inválido.')
+
+  // Bolão: palpite de jogo que já começou não muda mais (nem entra, nem sai).
+  const sala = await ctx.db.prepare('SELECT competicao, temporada FROM salas WHERE codigo = ?').bind(codigo).first<{ competicao: string; temporada: number }>()
+  if (!sala) throw new ErroHttp(404, 'Sala não encontrada.')
+  let partidas: Partida[]
+  try {
+    partidas = await ctx.partidas(sala.competicao, sala.temporada)
+  } catch (erro) {
+    console.error(erro)
+    throw new ErroHttp(503, 'Não deu para conferir o horário dos jogos agora. Tente de novo em instantes.')
+  }
+  const antes = decodificarPalpites(eu.palpites) ?? {}
+  if (palpitesMexidosEmJogosFechados(partidas, antes, depois, Date.now()).length > 0)
+    throw new ErroHttp(409, 'Um dos jogos já começou: o palpite dele não pode mais mudar.')
 
   const agora = new Date().toISOString()
   await ctx.db.batch([
@@ -334,9 +360,9 @@ export async function exigirConta(request: Request, ctx: Contexto, { confirmado 
 
 function participanteDaConta(db: D1Database, codigo: string, uid: string) {
   return db
-    .prepare('SELECT id, nome, dono FROM participantes WHERE sala = ? AND uid = ?')
+    .prepare('SELECT id, nome, dono, palpites FROM participantes WHERE sala = ? AND uid = ?')
     .bind(codigo, uid)
-    .first<{ id: number; nome: string; dono: number }>()
+    .first<{ id: number; nome: string; dono: number; palpites: string }>()
 }
 
 /** As participações novas não usam chave; a coluna é obrigatória, então vai o hash de algo que ninguém tem. */

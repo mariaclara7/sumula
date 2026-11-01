@@ -7,7 +7,9 @@ import type { JogoComPlacar } from './classificacao'
 export type PlacarDigitado = { mandante: number | null; visitante: number | null }
 export type PalpitesUsuario = Record<number, PlacarDigitado>
 
-export const MAIOR_PLACAR = 20
+import { MAIOR_PLACAR } from './codigoPalpites'
+
+export { MAIOR_PLACAR }
 
 /** Jogo que o usuário pode palpitar: tudo o que ainda não tem resultado (inclui adiados) e não foi cancelado. */
 export function podePalpitar(partida: Partida) {

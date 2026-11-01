@@ -20,6 +20,9 @@
       "database_id": "f5e39e98-4d1a-496c-81c5-691ea6808f98"
     }
   ],
+  // Os dados dos jogos (Worker "sumula-dados", do repositório api-sumula): a API das salas confere neles o
+  // horário de cada jogo, para travar o palpite de jogo que já começou.
+  "services": [{ "binding": "DADOS", "service": "sumula-dados" }],
   // Contas do Firebase que valem na API (o servidor confere o token de quem está logado).
   "vars": {
     "FIREBASE_PROJECT_ID": "brasumula"
