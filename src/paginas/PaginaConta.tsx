@@ -201,7 +201,7 @@ function Seguranca({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }
   async function pedirExclusao() {
     const sim = await confirmar({
       titulo: 'Excluir a sua conta?',
-      texto: 'A conta é apagada de vez, junto com o que estiver ligado a ela. Não dá para desfazer.',
+      texto: 'A conta é apagada de vez: você sai de todas as salas, e o seu time do coração e os seus palpites nas salas são apagados. Não dá para desfazer.',
       confirmar: 'Excluir conta',
       perigo: true,
     })
@@ -227,7 +227,8 @@ function Seguranca({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }
       {janela}
       <Rotulo>SESSÃO E SEGURANÇA</Rotulo>
       <p className="mt-3 text-sm leading-relaxed text-texto-2">
-        A senha fica guardada só no Firebase, do Google, com criptografia. A BraSúmula guarda apenas o seu nome e e-mail.
+        A senha fica guardada só no Firebase, do Google, com criptografia. A BraSúmula guarda apenas o seu nome, o seu
+        time do coração e os seus palpites nas salas.
       </p>
       <button
         type="button"

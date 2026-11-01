@@ -1,6 +1,6 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { usePalpites, usePartidas, useTimes } from '../api/consultas'
 import {
   entrarNaSala,
@@ -9,6 +9,7 @@ import {
   quemSou,
   sairOuRemover,
   useSala,
+  vincularParticipacao,
   type ParticipanteSala,
   type Sala,
 } from '../api/salas'
@@ -21,19 +22,11 @@ import { Pagina } from '../componentes/Pagina'
 import { JogoDoSimulador, NavegacaoRodadas, TabelaSimulada } from '../componentes/Simulacao'
 import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { useConfirmacao } from '../componentes/useConfirmacao'
+import { useConta } from '../conta/conta'
 import { ZONAS, zonaDaPosicao } from '../config'
 import { calcularClassificacao } from '../util/classificacao'
 import { codificarPalpites, decodificarPalpites } from '../util/compartilhar'
-import {
-  corDoParticipante,
-  esquecerParticipacao,
-  formatarCodigo,
-  guardarParticipacao,
-  iniciais,
-  lerCodigo,
-  lerMinhasSalas,
-  type MinhaParticipacao,
-} from '../util/salas'
+import { corDoParticipante, esquecerParticipacao, formatarCodigo, iniciais, lerCodigo, lerMinhasSalas } from '../util/salas'
 import {
   acertoDoPalpite,
   jogosDaSimulacao,
@@ -139,24 +132,32 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   const navegar = useNavigate()
   const queryClient = useQueryClient()
   const [confirmar, janelaConfirmacao] = useConfirmacao()
-  const [minhas, setMinhas] = useState(lerMinhasSalas)
-  const minha = minhas[sala.codigo] as MinhaParticipacao | undefined
-  const eu = sala.participantes.find((p) => p.id === minha?.id)
+  const { carregando: carregandoConta, usuario } = useConta()
   const [soOlhando, setSoOlhando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
-  // Link pessoal (#chave=...): abre a sala como a mesma pessoa em outro aparelho.
+  // Quem a conta é nesta sala (null: não está nela). O servidor descobre pelo login, em qualquer aparelho.
+  const consultaEu = useQuery({
+    queryKey: ['sala-eu', sala.codigo, usuario?.uid],
+    queryFn: () => quemSou(sala.codigo),
+    enabled: usuario !== null,
+    staleTime: Infinity,
+  })
+  const meuId = usuario ? (consultaEu.data ?? null) : null
+  const eu = sala.participantes.find((p) => p.id === meuId)
+  const descobrindo = carregandoConta || (usuario !== null && consultaEu.isPending)
+
+  // Participação de antes do login (chave neste navegador): liga à conta assim que a pessoa entra.
   useEffect(() => {
-    const chave = new URLSearchParams(window.location.hash.slice(1)).get('chave')
-    if (!chave) return
-    history.replaceState(null, '', window.location.pathname + window.location.search)
-    quemSou(sala.codigo, chave)
-      .then(({ id }) => {
-        guardarParticipacao(sala.codigo, { id, chave, nomeSala: sala.nome, entrouEm: new Date().toISOString() })
-        setMinhas(lerMinhasSalas())
+    const antiga = lerMinhasSalas()[sala.codigo]
+    if (!usuario || !antiga) return
+    vincularParticipacao(sala.codigo, antiga.chave)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['sala-eu', sala.codigo] }))
+      .catch((erro) => {
+        if (erro instanceof ErroSala && erro.status === 409) setAviso(erro.message)
       })
-      .catch(() => setAviso('Esse link pessoal não vale mais: a pessoa saiu ou foi removida da sala.'))
-  }, [sala.codigo, sala.nome])
+      .finally(() => esquecerParticipacao(sala.codigo))
+  }, [usuario, sala.codigo, queryClient])
 
   // ----- os meus palpites: editados aqui na hora e gravados na sala logo depois -----
   // O rascunho é o que está nos campos, inclusive placar pela metade (um lado só). Para a sala vão só os jogos com
@@ -178,18 +179,19 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     : 0
 
   useEffect(() => {
-    if (!pendente || codigoRascunho === null || !minha || !eu) return
+    if (!pendente || codigoRascunho === null || !eu) return
+    const meu = eu.id
     const timer = setTimeout(
       async () => {
         try {
-          await gravarPalpitesNaSala(sala.codigo, minha.id, minha.chave, codigoRascunho)
+          await gravarPalpitesNaSala(sala.codigo, meu, codigoRascunho)
           queryClient.setQueryData<{ sala: Sala; etag: string | null }>(['sala', sala.codigo], (atual) =>
             atual
               ? {
                   ...atual,
                   sala: {
                     ...atual.sala,
-                    participantes: atual.sala.participantes.map((p) => (p.id === minha.id ? { ...p, palpites: codigoRascunho } : p)),
+                    participantes: atual.sala.participantes.map((p) => (p.id === meu ? { ...p, palpites: codigoRascunho } : p)),
                   },
                 }
               : atual,
@@ -197,12 +199,12 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
           setGravado(codigoRascunho)
           setErroAoSalvar(null)
         } catch (erro) {
-          if (erro instanceof ErroSala && erro.status === 401) {
-            esquecerParticipacao(sala.codigo)
-            setMinhas(lerMinhasSalas())
+          if (erro instanceof ErroSala && erro.status === 403) {
+            // Saiu ou foi removida da sala (por exemplo, em outro aparelho).
             setRascunho(null)
             setGravado(null)
-            setAviso('Você não está mais nesta sala.')
+            setAviso(erro.message)
+            queryClient.invalidateQueries({ queryKey: ['sala-eu', sala.codigo] })
             return
           }
           setErroAoSalvar(erro instanceof ErroSala ? erro.message : 'Não foi possível salvar.')
@@ -214,7 +216,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     return () => clearTimeout(timer)
     // erroAoSalvar fica de fora: só define a espera da próxima tentativa.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendente, codigoRascunho, tentativa, minha, eu?.id, sala.codigo, queryClient])
+  }, [pendente, codigoRascunho, tentativa, eu?.id, sala.codigo, queryClient])
 
   // Não deixa fechar a aba com palpite ainda não gravado.
   useEffect(() => {
@@ -306,7 +308,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   }
 
   async function sair() {
-    if (!minha || !eu) return
+    if (!eu) return
     const sairMesmo = await confirmar({
       titulo: 'Sair da sala?',
       texto: `Os seus palpites vão sair da sala "${sala.nome}". Para voltar, alguém precisa mandar o link de novo.`,
@@ -315,20 +317,21 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     })
     if (!sairMesmo) return
     try {
-      await sairOuRemover(sala.codigo, minha.id, minha.chave)
+      await sairOuRemover(sala.codigo, eu.id)
     } catch (erro) {
-      if (!(erro instanceof ErroSala && erro.status === 401)) {
+      if (!(erro instanceof ErroSala && erro.status === 403)) {
         setAviso(erro instanceof ErroSala ? erro.message : 'Não foi possível sair agora.')
         return
       }
     }
-    esquecerParticipacao(sala.codigo)
     queryClient.removeQueries({ queryKey: ['sala', sala.codigo] })
+    queryClient.removeQueries({ queryKey: ['sala-eu', sala.codigo] })
+    queryClient.invalidateQueries({ queryKey: ['minhas-salas'] })
     navegar('/sala')
   }
 
   async function remover(alvo: ParticipanteSala) {
-    if (!minha) return
+    if (!eu) return
     const removerMesmo = await confirmar({
       titulo: `Remover ${alvo.nome}?`,
       texto: `${alvo.nome} sai da sala e os palpites somem. Se tiver o link, pode entrar de novo enquanto houver vaga.`,
@@ -337,7 +340,7 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
     })
     if (!removerMesmo) return
     try {
-      await sairOuRemover(sala.codigo, alvo.id, minha.chave)
+      await sairOuRemover(sala.codigo, alvo.id)
       setEscolhido(null)
       await queryClient.invalidateQueries({ queryKey: ['sala', sala.codigo] })
     } catch (erro) {
@@ -372,6 +375,13 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
   }, [aviso])
 
   const precisaEntrar = !eu && !soOlhando
+  if (descobrindo) {
+    return (
+      <Pagina className="pt-9 pb-12">
+        <Carregando />
+      </Pagina>
+    )
+  }
 
   return (
     <Pagina className="pt-9 pb-12">
@@ -392,27 +402,10 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
               Copiar convite · {sala.participantes.length}/{MAXIMO}
             </BotaoPrincipal>
           )}
-          {eu && minha && (
-            <>
-              <button
-                type="button"
-                title="Copia um link só seu, para usar a sala como você no celular ou em outro computador"
-                className={BOTAO_SECUNDARIO}
-                onClick={() =>
-                  copiar(
-                    'Meu link pessoal da sala',
-                    `${linkConvite}#chave=${minha.chave}`,
-                    'Link pessoal copiado. Abra no seu outro aparelho e não mande para ninguém: quem tiver esse link mexe nos seus palpites.',
-                  )
-                }
-              >
-                <span className="sm:hidden">Outro aparelho</span>
-                <span className="hidden sm:inline">Abrir em outro aparelho</span>
-              </button>
-              <button type="button" className={`${BOTAO_SECUNDARIO} text-vermelho`} onClick={sair}>
-                Sair da sala
-              </button>
-            </>
+          {eu && (
+            <button type="button" className={`${BOTAO_SECUNDARIO} col-span-2 text-vermelho sm:col-span-1`} onClick={sair}>
+              Sair da sala
+            </button>
           )}
         </div>
       </div>
@@ -423,7 +416,12 @@ function TelaSala({ sala, partidas, times, palpitesSumula }: PropsTela) {
       )}
 
       {precisaEntrar ? (
-        <Entrar sala={sala} cheia={cheia} aoEntrar={() => setMinhas(lerMinhasSalas())} aoSoOlhar={() => setSoOlhando(true)} />
+        <Entrar
+          sala={sala}
+          cheia={cheia}
+          aoEntrar={() => queryClient.invalidateQueries({ queryKey: ['sala-eu', sala.codigo] })}
+          aoSoOlhar={() => setSoOlhando(true)}
+        />
       ) : (
         <>
           <div role="tablist" aria-label="Pessoas na sala" className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
@@ -657,7 +655,9 @@ function Entrar({
   aoSoOlhar: () => void
 }) {
   const queryClient = useQueryClient()
-  const [nome, setNome] = useState('')
+  const { usuario } = useConta()
+  const { pathname } = useLocation()
+  const voltar = encodeURIComponent(pathname)
   const [doSimulador] = useState(palpitesDoSimulador)
   const [trazer, setTrazer] = useState(true)
   const [enviando, setEnviando] = useState(false)
@@ -669,11 +669,11 @@ function Entrar({
     setErro(null)
     setEnviando(true)
     try {
-      const { id, chave } = await entrarNaSala(sala.codigo, nome)
-      guardarParticipacao(sala.codigo, { id, chave, nomeSala: sala.nome, entrouEm: new Date().toISOString() })
+      const { id } = await entrarNaSala(sala.codigo, usuario!.nome)
       const codigoPalpites = trazer ? codificarPalpites(doSimulador) : null
-      if (codigoPalpites) await gravarPalpitesNaSala(sala.codigo, id, chave, codigoPalpites).catch(() => {})
+      if (codigoPalpites) await gravarPalpitesNaSala(sala.codigo, id, codigoPalpites).catch(() => {})
       await queryClient.invalidateQueries({ queryKey: ['sala', sala.codigo] })
+      queryClient.invalidateQueries({ queryKey: ['minhas-salas'] })
       aoEntrar()
     } catch (e) {
       setErro(e instanceof ErroSala ? e.message : 'Não foi possível entrar. Tente de novo.')
@@ -698,53 +698,88 @@ function Entrar({
           </div>
         </div>
       ) : (
-        <form onSubmit={entrar} className="corte-duplo bg-grafite p-6 text-creme">
+        <div className="corte-duplo bg-grafite p-6 text-creme">
           <Rotulo className="text-lima">VOCÊ FOI CONVIDADO</Rotulo>
-          <p className="mt-3 text-2xl leading-tight font-black">Entre na sala para fazer os seus palpites.</p>
-          <label htmlFor="nome-entrar" className="mt-5 block text-sm font-bold">
-            Qual é o seu nome?
-          </label>
-          <input
-            id="nome-entrar"
-            required
-            autoFocus
-            maxLength={20}
-            autoComplete="given-name"
-            value={nome}
-            onChange={(evento) => setNome(evento.target.value)}
-            placeholder="Ex.: Lucas"
-            className="mt-1.5 w-full border-2 border-creme bg-transparent px-3 py-2.5 text-base font-bold text-creme placeholder:text-cinza/70 focus:border-lima focus:outline-none"
-          />
-          <p className="mt-1 text-xs text-cinza">É como os outros vão ver você na sala.</p>
-          {quantosNoSimulador > 0 && (
-            <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-sm">
-              <input
-                type="checkbox"
-                checked={trazer}
-                onChange={(evento) => setTrazer(evento.target.checked)}
-                className="mt-0.5 size-4 flex-none accent-lima"
-              />
-              <span>Começar com os {quantosNoSimulador} palpites que já fiz no Simulador</span>
-            </label>
+          {!usuario ? (
+            <>
+              <p className="mt-3 text-2xl leading-tight font-black">Entre com a sua conta para fazer os seus palpites.</p>
+              <p className="mt-2 text-sm text-cinza">
+                Com a conta, a sala fica com você em qualquer aparelho, e ninguém consegue palpitar no seu lugar.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Link
+                  to={`/entrar?voltar=${voltar}`}
+                  className="border-2 border-lima bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite hover:text-grafite"
+                >
+                  Entrar
+                </Link>
+                <Link
+                  to={`/criar-conta?voltar=${voltar}`}
+                  className="border-2 border-creme px-[18px] py-3 text-sm font-extrabold text-creme hover:text-lima"
+                >
+                  Criar conta
+                </Link>
+                <button type="button" onClick={aoSoOlhar} className="cursor-pointer px-1 text-sm font-bold text-cinza hover:text-creme">
+                  Só olhar
+                </button>
+              </div>
+            </>
+          ) : !usuario.emailConfirmado ? (
+            <>
+              <p className="mt-3 text-2xl leading-tight font-black">Falta confirmar o seu e-mail.</p>
+              <p className="mt-2 text-sm text-cinza">
+                Clique no link que mandamos para <b className="text-creme">{usuario.email}</b> e volte aqui para entrar na sala.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Link to="/conta" className="border-2 border-lima bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite hover:text-grafite">
+                  Ir para Minha conta
+                </Link>
+                <button type="button" onClick={aoSoOlhar} className="cursor-pointer px-1 text-sm font-bold text-cinza hover:text-creme">
+                  Só olhar
+                </button>
+              </div>
+            </>
+          ) : (
+            <form onSubmit={entrar}>
+              <p className="mt-3 text-2xl leading-tight font-black">Entre na sala para fazer os seus palpites.</p>
+              <p className="mt-2 text-sm text-cinza">
+                Você vai aparecer como <b className="text-creme">{usuario.nome}</b>. Para mudar, use{' '}
+                <Link to="/conta" className="font-bold text-lima hover:underline">
+                  Minha conta
+                </Link>
+                .
+              </p>
+              {quantosNoSimulador > 0 && (
+                <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={trazer}
+                    onChange={(evento) => setTrazer(evento.target.checked)}
+                    className="mt-0.5 size-4 flex-none accent-lima"
+                  />
+                  <span>Começar com os {quantosNoSimulador} palpites que já fiz no Simulador</span>
+                </label>
+              )}
+              {erro && (
+                <p role="alert" className="mt-4 text-sm font-bold text-[#ff8a8d]">
+                  {erro}
+                </p>
+              )}
+              <div className="mt-5 flex flex-wrap items-center gap-4">
+                <button
+                  type="submit"
+                  disabled={enviando}
+                  className="cursor-pointer border-2 border-lima bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite shadow-[4px_4px_0_#f2f1ec] transition-[transform,box-shadow] duration-75 active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60"
+                >
+                  {enviando ? 'Entrando…' : 'Entrar na sala'}
+                </button>
+                <button type="button" onClick={aoSoOlhar} className="cursor-pointer text-sm font-bold text-cinza hover:text-creme">
+                  Só olhar
+                </button>
+              </div>
+            </form>
           )}
-          {erro && (
-            <p role="alert" className="mt-4 text-sm font-bold text-[#ff8a8d]">
-              {erro}
-            </p>
-          )}
-          <div className="mt-5 flex flex-wrap items-center gap-4">
-            <button
-              type="submit"
-              disabled={enviando}
-              className="cursor-pointer border-2 border-lima bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite shadow-[4px_4px_0_#f2f1ec] transition-[transform,box-shadow] duration-75 active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60"
-            >
-              {enviando ? 'Entrando…' : 'Entrar na sala'}
-            </button>
-            <button type="button" onClick={aoSoOlhar} className="cursor-pointer text-sm font-bold text-cinza hover:text-creme">
-              Só olhar
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       <div className="border-2 border-texto bg-superficie p-5">

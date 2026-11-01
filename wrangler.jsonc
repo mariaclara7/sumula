@@ -20,6 +20,10 @@
       "database_id": "f5e39e98-4d1a-496c-81c5-691ea6808f98"
     }
   ],
+  // Contas do Firebase que valem na API (o servidor confere o token de quem está logado).
+  "vars": {
+    "FIREBASE_PROJECT_ID": "brasumula"
+  },
   // Uma vez por dia, apaga as salas paradas há mais de 60 dias.
   "triggers": {
     "crons": ["23 6 * * *"]

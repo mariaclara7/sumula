@@ -36,14 +36,30 @@ export class ErroSala extends Error {
 
 const BASE = '/api/salas'
 
-async function pedir<T>(metodo: string, caminho: string, { corpo, chave }: { corpo?: unknown; chave?: string } = {}) {
-  const headers: Record<string, string> = {}
+/**
+ * O ID token do Firebase de quem está logado (o Firebase renova sozinho quando vence). Vai em cada pedido que
+ * mexe em sala; o servidor confere a assinatura.
+ */
+export async function tokenDaConta() {
+  const { carregarAuth } = await import('../conta/firebase')
+  const { auth } = await carregarAuth()
+  const token = await auth.currentUser?.getIdToken()
+  if (!token) throw new ErroSala(401, 'Entre com a sua conta para fazer isso.')
+  return token
+}
+
+export async function pedirApi<T>(
+  metodo: string,
+  endereco: string,
+  { corpo, conta = true, extra = {} }: { corpo?: unknown; conta?: boolean; extra?: Record<string, string> } = {},
+) {
+  const headers: Record<string, string> = { ...extra }
   if (corpo !== undefined) headers['Content-Type'] = 'application/json'
-  if (chave) headers.Authorization = `Bearer ${chave}`
+  if (conta) headers.Authorization = `Bearer ${await tokenDaConta()}`
 
   let resposta: Response
   try {
-    resposta = await fetch(`${BASE}${caminho}`, {
+    resposta = await fetch(endereco, {
       method: metodo,
       headers,
       body: corpo === undefined ? undefined : JSON.stringify(corpo),
@@ -60,23 +76,38 @@ async function pedir<T>(metodo: string, caminho: string, { corpo, chave }: { cor
 }
 
 export function criarSala(dados: { nome: string; seuNome: string; competicao: string; temporada: number }) {
-  return pedir<{ codigo: string; participante: { id: number; chave: string } }>('POST', '', { corpo: dados })
+  return pedirApi<{ codigo: string; participante: { id: number } }>('POST', BASE, { corpo: dados })
 }
 
 export function entrarNaSala(codigo: string, nome: string) {
-  return pedir<{ id: number; chave: string }>('POST', `/${codigo}/participantes`, { corpo: { nome } })
+  return pedirApi<{ id: number }>('POST', `${BASE}/${codigo}/participantes`, { corpo: { nome } })
 }
 
-export function quemSou(codigo: string, chave: string) {
-  return pedir<{ id: number; nome: string }>('GET', `/${codigo}/eu`, { chave })
+/** O id da conta nesta sala, ou null se a conta não está nela. */
+export async function quemSou(codigo: string) {
+  try {
+    return (await pedirApi<{ id: number; nome: string }>('GET', `${BASE}/${codigo}/eu`)).id
+  } catch (erro) {
+    if (erro instanceof ErroSala && erro.status === 404) return null
+    throw erro
+  }
 }
 
-export function gravarPalpitesNaSala(codigo: string, id: number, chave: string, palpites: string) {
-  return pedir<void>('PUT', `/${codigo}/participantes/${id}/palpites`, { corpo: { palpites }, chave })
+/** Liga à conta a participação de antes do login (a chave que ficou neste navegador). */
+export function vincularParticipacao(codigo: string, chave: string) {
+  return pedirApi<{ id: number }>('POST', `${BASE}/${codigo}/vincular`, { extra: { 'X-Chave-Sala': chave } })
 }
 
-export function sairOuRemover(codigo: string, id: number, chave: string) {
-  return pedir<void>('DELETE', `/${codigo}/participantes/${id}`, { chave })
+export function minhasSalasDaConta() {
+  return pedirApi<{ codigo: string; nome: string; pessoas: number }[]>('GET', BASE)
+}
+
+export function gravarPalpitesNaSala(codigo: string, id: number, palpites: string) {
+  return pedirApi<void>('PUT', `${BASE}/${codigo}/participantes/${id}/palpites`, { corpo: { palpites } })
+}
+
+export function sairOuRemover(codigo: string, id: number) {
+  return pedirApi<void>('DELETE', `${BASE}/${codigo}/participantes/${id}`)
 }
 
 /** A cada quanto tempo a sala busca os palpites dos outros (só com a aba visível). */

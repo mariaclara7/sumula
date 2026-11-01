@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Layout } from './componentes/Layout'
 import { ProvedorConta } from './conta/ProvedorConta'
+import { SincronizarMeuTime } from './conta/SincronizarMeuTime'
 import { ProvedorPreferencias } from './componentes/Preferencias'
 import './index.css'
 import { PaginaArtilharia } from './paginas/PaginaArtilharia'
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <ProvedorPreferencias>
         <ProvedorConta>
+          <SincronizarMeuTime />
         <BrowserRouter>
           <Routes>
             <Route element={<Layout />}>

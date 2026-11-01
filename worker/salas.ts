@@ -2,18 +2,22 @@
  * API das salas do simulador, em /api/salas. Guarda só nomes e palpites; as tabelas de cada pessoa são
  * calculadas no navegador, com o mesmo código do simulador.
  *
- * Sem login: quem cria ou entra numa sala recebe uma chave secreta (guardada só no navegador dela, o banco
- * fica com o SHA-256). A chave é o que deixa mudar os próprios palpites, sair da sala e, para quem é dono,
- * remover alguém.
+ * Para criar, entrar e palpitar é preciso estar logado (conta do Firebase com e-mail confirmado): o pedido
+ * traz o ID token do Firebase em "Authorization: Bearer", e o servidor confere a assinatura antes de tudo.
+ * Ver a sala pelo link continua aberto. Quem entrou antes do login existir tinha uma chave secreta no navegador;
+ * ela agora só serve para ligar aquela participação à conta (/vincular).
  *
+ *   GET    /api/salas                                  as salas da conta
  *   POST   /api/salas                                  cria a sala e o dono         { nome, seuNome, competicao, temporada }
- *   GET    /api/salas/:codigo                          a sala com todos os palpites (ETag para 304)
+ *   GET    /api/salas/:codigo                          a sala com todos os palpites (aberto; ETag para 304)
  *   POST   /api/salas/:codigo/participantes            entra na sala (até 5)        { nome }
- *   GET    /api/salas/:codigo/eu                       quem é o dono da chave       (link pessoal em outro aparelho)
+ *   GET    /api/salas/:codigo/eu                       quem a conta é nesta sala
+ *   POST   /api/salas/:codigo/vincular                 liga a participação antiga (X-Chave-Sala) à conta
  *   PUT    /api/salas/:codigo/participantes/:id/palpites  grava os palpites        { palpites }
  *   DELETE /api/salas/:codigo/participantes/:id        sai da sala ou remove alguém (só o dono remove outros)
  */
 
+import type { Identidade, VerificarToken } from './firebase'
 export const MAXIMO_PARTICIPANTES = 5
 export const TAMANHO_NOME_PESSOA = 20
 export const TAMANHO_NOME_SALA = 30
@@ -38,7 +42,7 @@ type Participante = {
   atualizado_em: string
 }
 
-class ErroHttp extends Error {
+export class ErroHttp extends Error {
   readonly status: number
   constructor(status: number, mensagem: string) {
     super(mensagem)
@@ -46,43 +50,66 @@ class ErroHttp extends Error {
   }
 }
 
-export async function tratarSalas(request: Request, db: D1Database): Promise<Response> {
+export type Contexto = { db: D1Database; verificar: VerificarToken }
+
+export async function tratarSalas(request: Request, ctx: Contexto): Promise<Response> {
   try {
-    return await rotear(request, db)
+    return await rotear(request, ctx)
   } catch (erro) {
-    if (erro instanceof ErroHttp) return json({ erro: erro.message }, erro.status)
-    console.error(erro)
-    return json({ erro: 'Algo deu errado. Tente de novo em instantes.' }, 500)
+    return respostaDeErro(erro)
   }
 }
 
-async function rotear(request: Request, db: D1Database): Promise<Response> {
+export function respostaDeErro(erro: unknown) {
+  if (erro instanceof ErroHttp) return json({ erro: erro.message }, erro.status)
+  console.error(erro)
+  return json({ erro: 'Algo deu errado. Tente de novo em instantes.' }, 500)
+}
+
+async function rotear(request: Request, ctx: Contexto): Promise<Response> {
   const caminho = new URL(request.url).pathname.replace(/\/+$/, '')
   const partes = caminho.split('/').slice(3) // ['', 'api', 'salas', ...]
   const metodo = request.method
 
   if (partes.length === 0) {
-    if (metodo === 'POST') return criarSala(request, db)
+    if (metodo === 'GET') return minhasSalas(request, ctx)
+    if (metodo === 'POST') return criarSala(request, ctx)
     throw new ErroHttp(405, 'Método não permitido.')
   }
 
   const codigo = normalizarCodigo(partes[0])
   if (!codigo) throw new ErroHttp(404, 'Sala não encontrada.')
 
-  if (partes.length === 1 && metodo === 'GET') return verSala(request, db, codigo)
-  if (partes.length === 2 && partes[1] === 'participantes' && metodo === 'POST') return entrar(request, db, codigo)
-  if (partes.length === 2 && partes[1] === 'eu' && metodo === 'GET') return quemSou(request, db, codigo)
+  if (partes.length === 1 && metodo === 'GET') return verSala(request, ctx.db, codigo)
+  if (partes.length === 2 && partes[1] === 'participantes' && metodo === 'POST') return entrar(request, ctx, codigo)
+  if (partes.length === 2 && partes[1] === 'eu' && metodo === 'GET') return quemSou(request, ctx, codigo)
+  if (partes.length === 2 && partes[1] === 'vincular' && metodo === 'POST') return vincular(request, ctx, codigo)
 
   if (partes[1] === 'participantes' && /^\d{1,12}$/.test(partes[2] ?? '')) {
     const id = Number(partes[2])
-    if (partes.length === 4 && partes[3] === 'palpites' && metodo === 'PUT') return gravarPalpites(request, db, codigo, id)
-    if (partes.length === 3 && metodo === 'DELETE') return remover(request, db, codigo, id)
+    if (partes.length === 4 && partes[3] === 'palpites' && metodo === 'PUT') return gravarPalpites(request, ctx, codigo, id)
+    if (partes.length === 3 && metodo === 'DELETE') return remover(request, ctx, codigo, id)
   }
 
   throw new ErroHttp(404, 'Endereço não encontrado.')
 }
 
-async function criarSala(request: Request, db: D1Database) {
+async function minhasSalas(request: Request, ctx: Contexto) {
+  const conta = await exigirConta(request, ctx)
+  const { results } = await ctx.db
+    .prepare(
+      `SELECT s.codigo, s.nome, (SELECT COUNT(*) FROM participantes WHERE sala = s.codigo) AS pessoas
+       FROM participantes p JOIN salas s ON s.codigo = p.sala
+       WHERE p.uid = ? ORDER BY s.atualizada_em DESC`,
+    )
+    .bind(conta.uid)
+    .all<{ codigo: string; nome: string; pessoas: number }>()
+  return json(results)
+}
+
+async function criarSala(request: Request, ctx: Contexto) {
+  const conta = await exigirConta(request, ctx, { confirmado: true })
+  const { db } = ctx
   const corpo = await lerCorpo(request)
   const nome = lerNome(corpo.nome, TAMANHO_NOME_SALA, 'O nome da sala')
   const seuNome = lerNome(corpo.seuNome, TAMANHO_NOME_PESSOA, 'Seu nome')
@@ -91,8 +118,6 @@ async function criarSala(request: Request, db: D1Database) {
   if (!competicao || !temporada) throw new ErroHttp(400, 'Campeonato inválido.')
 
   const agora = new Date().toISOString()
-  const chave = gerarChave()
-  const chaveHash = await hash(chave)
 
   // Um código repetido é raríssimo (1 em ~1 bilhão), mas se acontecer tenta outro.
   for (let tentativa = 0; tentativa < 5; tentativa++) {
@@ -104,12 +129,12 @@ async function criarSala(request: Request, db: D1Database) {
           .bind(codigo, nome, competicao, corpo.temporada, agora, agora),
         db
           .prepare(
-            'INSERT INTO participantes (sala, nome, cor, dono, chave_hash, entrou_em, atualizado_em) VALUES (?, ?, 0, 1, ?, ?, ?) RETURNING id',
+            'INSERT INTO participantes (sala, nome, cor, dono, chave_hash, uid, entrou_em, atualizado_em) VALUES (?, ?, 0, 1, ?, ?, ?, ?) RETURNING id',
           )
-          .bind(codigo, seuNome, chaveHash, agora, agora),
+          .bind(codigo, seuNome, await chaveInutil(), conta.uid, agora, agora),
       ])
       const id = (inserido.results[0] as { id: number }).id
-      return json({ codigo, participante: { id, chave } }, 201)
+      return json({ codigo, participante: { id } }, 201)
     } catch (erro) {
       if (!String(erro).includes('UNIQUE')) throw erro
     }
@@ -122,6 +147,7 @@ async function verSala(request: Request, db: D1Database, codigo: string) {
   const etag = `W/"${sala.atualizada_em}"`
   if (request.headers.get('If-None-Match') === etag) return new Response(null, { status: 304, headers: cabecalhos({ ETag: etag }) })
 
+  // O uid de cada um nunca sai daqui: quem olha a sala vê só nome, cor e palpites.
   const { results } = await db
     .prepare('SELECT id, nome, cor, dono, palpites, atualizado_em FROM participantes WHERE sala = ? ORDER BY id')
     .bind(codigo)
@@ -149,19 +175,23 @@ async function verSala(request: Request, db: D1Database, codigo: string) {
   )
 }
 
-async function entrar(request: Request, db: D1Database, codigo: string) {
+async function entrar(request: Request, ctx: Contexto, codigo: string) {
+  const conta = await exigirConta(request, ctx, { confirmado: true })
+  const { db } = ctx
   const corpo = await lerCorpo(request)
   const nome = lerNome(corpo.nome, TAMANHO_NOME_PESSOA, 'Seu nome')
   await buscarSala(db, codigo)
 
-  const chave = gerarChave()
-  const chaveHash = await hash(chave)
+  // Já está na sala com esta conta: só devolve quem é.
+  const jaEsta = await participanteDaConta(db, codigo, conta.uid)
+  if (jaEsta) return json({ id: jaEsta.id })
 
   // Duas pessoas entrando ao mesmo tempo podem pegar a mesma cor; o UNIQUE (sala, cor) barra uma delas e ela tenta de novo.
   for (let tentativa = 0; tentativa < 3; tentativa++) {
     const { results } = await db.prepare('SELECT nome, cor FROM participantes WHERE sala = ?').bind(codigo).all<{ nome: string; cor: number }>()
     if (results.length >= MAXIMO_PARTICIPANTES) throw new ErroHttp(409, `A sala já está cheia (${MAXIMO_PARTICIPANTES} pessoas).`)
-    if (results.some((p) => mesmoNome(p.nome, nome))) throw new ErroHttp(409, 'Já tem alguém com esse nome na sala. Use outro.')
+    if (results.some((p) => mesmoNome(p.nome, nome)))
+      throw new ErroHttp(409, 'Já tem alguém com esse nome na sala. Mude o seu nome em Minha conta e tente de novo.')
 
     const usadas = new Set(results.map((p) => p.cor))
     const cor = [...Array(MAXIMO_PARTICIPANTES).keys()].find((c) => !usadas.has(c))!
@@ -170,12 +200,12 @@ async function entrar(request: Request, db: D1Database, codigo: string) {
       const [inserido] = await db.batch([
         db
           .prepare(
-            'INSERT INTO participantes (sala, nome, cor, dono, chave_hash, entrou_em, atualizado_em) VALUES (?, ?, ?, 0, ?, ?, ?) RETURNING id',
+            'INSERT INTO participantes (sala, nome, cor, dono, chave_hash, uid, entrou_em, atualizado_em) VALUES (?, ?, ?, 0, ?, ?, ?, ?) RETURNING id',
           )
-          .bind(codigo, nome, cor, chaveHash, agora, agora),
+          .bind(codigo, nome, cor, await chaveInutil(), conta.uid, agora, agora),
         tocarSala(db, codigo, agora),
       ])
-      return json({ id: (inserido.results[0] as { id: number }).id, chave }, 201)
+      return json({ id: (inserido.results[0] as { id: number }).id }, 201)
     } catch (erro) {
       if (!String(erro).includes('UNIQUE')) throw erro
     }
@@ -183,13 +213,36 @@ async function entrar(request: Request, db: D1Database, codigo: string) {
   throw new ErroHttp(409, 'Muita gente entrando ao mesmo tempo. Tente de novo.')
 }
 
-async function quemSou(request: Request, db: D1Database, codigo: string) {
-  const eu = await autenticar(request, db, codigo)
+async function quemSou(request: Request, ctx: Contexto, codigo: string) {
+  const conta = await exigirConta(request, ctx)
+  const eu = await participanteDaConta(ctx.db, codigo, conta.uid)
+  if (!eu) throw new ErroHttp(404, 'Você não está nesta sala.')
   return json({ id: eu.id, nome: eu.nome })
 }
 
-async function gravarPalpites(request: Request, db: D1Database, codigo: string, id: number) {
-  const eu = await autenticar(request, db, codigo)
+/** Liga à conta a participação de antes do login (a chave que ficou no navegador). */
+async function vincular(request: Request, ctx: Contexto, codigo: string) {
+  const conta = await exigirConta(request, ctx)
+  const chave = request.headers.get('X-Chave-Sala')?.match(/^[A-Za-z0-9_-]{20,100}$/)?.[0]
+  if (!chave) throw new ErroHttp(400, 'Chave inválida.')
+
+  const antiga = await ctx.db
+    .prepare('SELECT id, uid FROM participantes WHERE sala = ? AND chave_hash = ?')
+    .bind(codigo, await hash(chave))
+    .first<{ id: number; uid: string | null }>()
+  if (!antiga) throw new ErroHttp(404, 'Essa participação não existe mais.')
+  if (antiga.uid === conta.uid) return json({ id: antiga.id })
+  if (antiga.uid) throw new ErroHttp(409, 'Essa participação já está ligada a outra conta.')
+  if (await participanteDaConta(ctx.db, codigo, conta.uid)) throw new ErroHttp(409, 'A sua conta já está nesta sala.')
+
+  await ctx.db.prepare('UPDATE participantes SET uid = ? WHERE id = ? AND uid IS NULL').bind(conta.uid, antiga.id).run()
+  return json({ id: antiga.id })
+}
+
+async function gravarPalpites(request: Request, ctx: Contexto, codigo: string, id: number) {
+  const conta = await exigirConta(request, ctx, { confirmado: true })
+  const eu = await participanteDaConta(ctx.db, codigo, conta.uid)
+  if (!eu) throw new ErroHttp(403, 'Você não está nesta sala.')
   if (eu.id !== id) throw new ErroHttp(403, 'Você só pode mudar os seus palpites.')
 
   const corpo = await lerCorpo(request)
@@ -198,24 +251,33 @@ async function gravarPalpites(request: Request, db: D1Database, codigo: string, 
     throw new ErroHttp(400, 'Palpites em formato inválido.')
 
   const agora = new Date().toISOString()
-  await db.batch([
-    db.prepare('UPDATE participantes SET palpites = ?, atualizado_em = ? WHERE id = ?').bind(palpites, agora, id),
-    tocarSala(db, codigo, agora),
+  await ctx.db.batch([
+    ctx.db.prepare('UPDATE participantes SET palpites = ?, atualizado_em = ? WHERE id = ?').bind(palpites, agora, id),
+    tocarSala(ctx.db, codigo, agora),
   ])
   return new Response(null, { status: 204, headers: cabecalhos() })
 }
 
-async function remover(request: Request, db: D1Database, codigo: string, id: number) {
-  const eu = await autenticar(request, db, codigo)
+async function remover(request: Request, ctx: Contexto, codigo: string, id: number) {
+  const conta = await exigirConta(request, ctx)
+  const eu = await participanteDaConta(ctx.db, codigo, conta.uid)
+  if (!eu) throw new ErroHttp(403, 'Você não está nesta sala.')
   if (eu.id !== id && eu.dono !== 1) throw new ErroHttp(403, 'Só quem criou a sala pode remover outras pessoas.')
 
-  const alvo = await db.prepare('SELECT id, dono FROM participantes WHERE sala = ? AND id = ?').bind(codigo, id).first<{ id: number; dono: number }>()
+  const alvo = await ctx.db.prepare('SELECT id, dono FROM participantes WHERE sala = ? AND id = ?').bind(codigo, id).first<{ id: number; dono: number }>()
   if (!alvo) throw new ErroHttp(404, 'Essa pessoa não está na sala.')
+  await ctx.db.batch(tirarDaSala(ctx.db, codigo, alvo))
+  return new Response(null, { status: 204, headers: cabecalhos() })
+}
 
+/**
+ * Os comandos para tirar alguém de uma sala: se era o dono, quem entrou primeiro entre os que ficaram vira o
+ * dono; se a sala ficou vazia, ela é apagada.
+ */
+export function tirarDaSala(db: D1Database, codigo: string, alvo: { id: number; dono: number }) {
   const agora = new Date().toISOString()
-  await db.batch([
-    db.prepare('DELETE FROM participantes WHERE id = ?').bind(id),
-    // Se o dono saiu, quem entrou primeiro entre os que ficaram vira o dono.
+  return [
+    db.prepare('DELETE FROM participantes WHERE id = ?').bind(alvo.id),
     db
       .prepare(
         `UPDATE participantes SET dono = 1
@@ -223,10 +285,8 @@ async function remover(request: Request, db: D1Database, codigo: string, id: num
       )
       .bind(alvo.dono, codigo),
     tocarSala(db, codigo, agora),
-    // Sala vazia não serve para nada.
     db.prepare('DELETE FROM salas WHERE codigo = ? AND NOT EXISTS (SELECT 1 FROM participantes WHERE sala = ?)').bind(codigo, codigo),
-  ])
-  return new Response(null, { status: 204, headers: cabecalhos() })
+  ]
 }
 
 /** Tarefa diária: apaga as salas sem nenhuma mudança há mais de DIAS_PARA_EXPIRAR dias. */
@@ -246,22 +306,36 @@ async function buscarSala(db: D1Database, codigo: string) {
   return sala
 }
 
-async function autenticar(request: Request, db: D1Database, codigo: string) {
-  const chave = request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_-]{20,100})$/)?.[1]
-  if (!chave) throw new ErroHttp(401, 'Você não está nesta sala.')
-  const eu = await db
-    .prepare('SELECT id, nome, dono FROM participantes WHERE sala = ? AND chave_hash = ?')
-    .bind(codigo, await hash(chave))
-    .first<{ id: number; nome: string; dono: number }>()
-  if (!eu) throw new ErroHttp(401, 'Você não está mais nesta sala.')
-  return eu
+/**
+ * Quem está fazendo o pedido, pelo ID token do Firebase. Com `confirmado`, exige o e-mail confirmado (contas do
+ * Google já vêm confirmadas): é o que impede alguém de criar contas com e-mails falsos para encher as salas.
+ */
+export async function exigirConta(request: Request, ctx: Contexto, { confirmado = false } = {}): Promise<Identidade> {
+  const token = request.headers.get('Authorization')?.match(/^Bearer (\S{20,4096})$/)?.[1]
+  if (!token) throw new ErroHttp(401, 'Entre com a sua conta para fazer isso.')
+  const conta = await ctx.verificar(token)
+  if (!conta) throw new ErroHttp(401, 'A sua sessão expirou. Entre de novo.')
+  if (confirmado && !conta.emailConfirmado) throw new ErroHttp(403, 'Confirme o seu e-mail antes (veja em Minha conta).')
+  return conta
 }
 
-function tocarSala(db: D1Database, codigo: string, agora: string) {
+function participanteDaConta(db: D1Database, codigo: string, uid: string) {
+  return db
+    .prepare('SELECT id, nome, dono FROM participantes WHERE sala = ? AND uid = ?')
+    .bind(codigo, uid)
+    .first<{ id: number; nome: string; dono: number }>()
+}
+
+/** As participações novas não usam chave; a coluna é obrigatória, então vai o hash de algo que ninguém tem. */
+async function chaveInutil() {
+  return hash(gerarChave())
+}
+
+export function tocarSala(db: D1Database, codigo: string, agora: string) {
   return db.prepare('UPDATE salas SET atualizada_em = ? WHERE codigo = ?').bind(agora, codigo)
 }
 
-async function lerCorpo(request: Request): Promise<Record<string, unknown>> {
+export async function lerCorpo(request: Request): Promise<Record<string, unknown>> {
   const texto = await request.text()
   if (texto.length > MAIOR_CORPO) throw new ErroHttp(413, 'Dados grandes demais.')
   try {
@@ -306,11 +380,11 @@ async function hash(texto: string) {
   return [...new Uint8Array(resumo)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-function cabecalhos(extra: Record<string, string> = {}) {
+export function cabecalhos(extra: Record<string, string> = {}) {
   return { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra }
 }
 
-function json(dados: unknown, status = 200, extra: Record<string, string> = {}) {
+export function json(dados: unknown, status = 200, extra: Record<string, string> = {}) {
   return new Response(JSON.stringify(dados), {
     status,
     headers: cabecalhos({ 'Content-Type': 'application/json; charset=utf-8', ...extra }),

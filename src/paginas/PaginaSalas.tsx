@@ -1,17 +1,26 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { criarSala, ErroSala, gravarPalpitesNaSala } from '../api/salas'
+import { criarSala, ErroSala, gravarPalpitesNaSala, minhasSalasDaConta } from '../api/salas'
+import { useConta } from '../conta/conta'
 import { Pagina } from '../componentes/Pagina'
 import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { COMPETICAO, TEMPORADA } from '../config'
-import { formatarCodigo, guardarParticipacao, lerCodigo, lerMinhasSalas } from '../util/salas'
+import { formatarCodigo, lerCodigo, lerMinhasSalas } from '../util/salas'
 import { codificarPalpites } from '../util/compartilhar'
 import { palpitesDoSimulador } from '../util/simulador'
 
 /** /sala: criar uma sala, entrar com um código e voltar para as salas em que a pessoa já está. */
 export function PaginaSalas() {
   const navegar = useNavigate()
-  const [minhas] = useState(lerMinhasSalas)
+  const { usuario } = useConta()
+  // Salas da conta (do servidor) e, de quem ainda não entrou, as que ficaram neste navegador de antes do login.
+  const daConta = useQuery({
+    queryKey: ['minhas-salas', usuario?.uid],
+    queryFn: minhasSalasDaConta,
+    enabled: usuario !== null,
+  })
+  const [antigas] = useState(lerMinhasSalas)
   const [codigoDigitado, setCodigoDigitado] = useState('')
   const [erroCodigo, setErroCodigo] = useState<string | null>(null)
 
@@ -25,14 +34,20 @@ export function PaginaSalas() {
     navegar(`/sala/${formatarCodigo(codigo)}`)
   }
 
-  const salas = Object.entries(minhas).sort(([, a], [, b]) => b.entrouEm.localeCompare(a.entrouEm))
+  const salas = [
+    ...(daConta.data ?? []).map((s) => ({ codigo: s.codigo, nome: s.nome, detalhe: `${s.pessoas}/5` })),
+    ...Object.entries(antigas)
+      .filter(([codigo]) => !daConta.data?.some((s) => s.codigo === codigo))
+      .sort(([, a], [, b]) => b.entrouEm.localeCompare(a.entrouEm))
+      .map(([codigo, sala]) => ({ codigo, nome: sala.nomeSala, detalhe: usuario ? '' : 'entre para continuar' })),
+  ]
 
   return (
     <Pagina className="pt-9 pb-12">
       <TituloPagina>Sala</TituloPagina>
       <p className="mt-[18px] max-w-[720px] text-[15px] leading-[1.55] text-pretty text-texto-2">
         Simule o resto do campeonato com até 4 amigos. Cada um faz os próprios palpites, vê os dos outros e no fim vocês
-        comparam as tabelas. Sem cadastro: é só mandar o link.
+        comparam as tabelas. Para participar é preciso entrar com a sua conta; para só olhar uma sala, basta o link.
       </p>
 
       <div className="mt-7 grid items-start gap-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
@@ -80,14 +95,17 @@ export function PaginaSalas() {
                 <Rotulo>MINHAS SALAS</Rotulo>
               </h2>
               <ul className="mt-2">
-                {salas.map(([codigo, sala]) => (
-                  <li key={codigo} className="border-b border-borda last:border-b-0">
+                {salas.map((sala) => (
+                  <li key={sala.codigo} className="border-b border-borda last:border-b-0">
                     <Link
-                      to={`/sala/${formatarCodigo(codigo)}`}
+                      to={`/sala/${formatarCodigo(sala.codigo)}`}
                       className="flex items-center justify-between gap-3 py-2.5 font-bold hover:text-destaque"
                     >
-                      <span className="truncate">{sala.nomeSala}</span>
-                      <span className="flex-none font-mono text-xs text-texto-2">{formatarCodigo(codigo)}</span>
+                      <span className="truncate">{sala.nome}</span>
+                      <span className="flex-none font-mono text-xs text-texto-2">
+                        {formatarCodigo(sala.codigo)}
+                        {sala.detalhe && ` · ${sala.detalhe}`}
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -101,8 +119,9 @@ export function PaginaSalas() {
 }
 
 function FormularioCriar({ aoCriar }: { aoCriar: (codigo: string) => void }) {
+  const { usuario } = useConta()
+  const queryClient = useQueryClient()
   const [nomeSala, setNomeSala] = useState('')
-  const [seuNome, setSeuNome] = useState('')
   const [doSimulador] = useState(palpitesDoSimulador)
   const [trazer, setTrazer] = useState(true)
   const [enviando, setEnviando] = useState(false)
@@ -114,16 +133,53 @@ function FormularioCriar({ aoCriar }: { aoCriar: (codigo: string) => void }) {
     setErro(null)
     setEnviando(true)
     try {
-      const { codigo, participante } = await criarSala({ nome: nomeSala, seuNome, competicao: COMPETICAO, temporada: TEMPORADA })
-      guardarParticipacao(codigo, { ...participante, nomeSala: nomeSala.trim(), entrouEm: new Date().toISOString() })
+      const { codigo, participante } = await criarSala({
+        nome: nomeSala,
+        seuNome: usuario!.nome,
+        competicao: COMPETICAO,
+        temporada: TEMPORADA,
+      })
       const codigoPalpites = trazer ? codificarPalpites(doSimulador) : null
       // Se falhar, a sala já existe e os palpites podem ser trazidos lá dentro.
-      if (codigoPalpites) await gravarPalpitesNaSala(codigo, participante.id, participante.chave, codigoPalpites).catch(() => {})
+      if (codigoPalpites) await gravarPalpitesNaSala(codigo, participante.id, codigoPalpites).catch(() => {})
+      queryClient.invalidateQueries({ queryKey: ['minhas-salas'] })
       aoCriar(codigo)
     } catch (e) {
       setErro(e instanceof ErroSala ? e.message : 'Não foi possível criar a sala. Tente de novo.')
       setEnviando(false)
     }
+  }
+
+  if (!usuario || !usuario.emailConfirmado) {
+    return (
+      <div className="corte-duplo bg-grafite p-6 text-creme">
+        <Rotulo className="text-lima">CRIAR UMA SALA</Rotulo>
+        <p className="mt-3 text-2xl leading-tight font-black">
+          {usuario ? 'Falta confirmar o seu e-mail.' : 'Entre com a sua conta para criar uma sala.'}
+        </p>
+        <p className="mt-2 text-sm text-cinza">
+          {usuario
+            ? `Clique no link que mandamos para ${usuario.email} e volte aqui.`
+            : 'A conta é de graça, com e-mail ou com o Google. A sala fica com você em qualquer aparelho.'}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          {usuario ? (
+            <Link to="/conta" className="border-2 border-lima bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite hover:text-grafite">
+              Ir para Minha conta
+            </Link>
+          ) : (
+            <>
+              <Link to="/entrar?voltar=%2Fsala" className="border-2 border-lima bg-lima px-[18px] py-3 text-sm font-extrabold text-grafite hover:text-grafite">
+                Entrar
+              </Link>
+              <Link to="/criar-conta?voltar=%2Fsala" className="border-2 border-creme px-[18px] py-3 text-sm font-extrabold text-creme hover:text-lima">
+                Criar conta
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -140,18 +196,13 @@ function FormularioCriar({ aoCriar }: { aoCriar: (codigo: string) => void }) {
           className={CAMPO_ESCURO}
         />
       </Campo>
-      <Campo rotulo="Seu nome" id="seu-nome" ajuda="É como os seus amigos vão ver você na sala.">
-        <input
-          id="seu-nome"
-          required
-          maxLength={20}
-          autoComplete="given-name"
-          value={seuNome}
-          onChange={(evento) => setSeuNome(evento.target.value)}
-          placeholder="Ex.: Maria"
-          className={CAMPO_ESCURO}
-        />
-      </Campo>
+      <p className="mt-3 text-sm text-cinza">
+        Você vai aparecer como <b className="text-creme">{usuario.nome}</b>. Para mudar, use{' '}
+        <Link to="/conta" className="font-bold text-lima hover:underline">
+          Minha conta
+        </Link>
+        .
+      </p>
       {quantosNoSimulador > 0 && (
         <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-sm">
           <input

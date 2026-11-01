@@ -38,7 +38,11 @@ export async function reenviarConfirmacao() {
 
 export async function mudarNome(nome: string) {
   const { auth, updateProfile } = await carregarAuth()
-  if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: nome.trim() })
+  if (!auth.currentUser) return
+  await updateProfile(auth.currentUser, { displayName: nome.trim() })
+  // O nome também aparece nas salas: muda lá (se a pessoa não estiver em nenhuma, não faz nada).
+  const { gravarEu } = await import('../api/eu')
+  await gravarEu({ nome: nome.trim() })
 }
 
 export async function sair() {
@@ -52,7 +56,15 @@ export async function sair() {
  */
 export async function excluirConta() {
   const { auth, deleteUser } = await carregarAuth()
-  if (auth.currentUser) await deleteUser(auth.currentUser)
+  const usuario = auth.currentUser
+  if (!usuario) return
+  // O token é pego antes: depois de excluir, ele ainda vale por alguns minutos para apagar os dados no servidor.
+  const token = await usuario.getIdToken()
+  await deleteUser(usuario)
+  const { apagarEu } = await import('../api/eu')
+  // Tira a pessoa de todas as salas e apaga as preferências. Se falhar, a conta já não existe mais e ninguém
+  // consegue usar esses dados; as salas paradas são apagadas sozinhas em 60 dias.
+  await apagarEu(token).catch(() => {})
 }
 
 /** Confirma quem é (senha ou Google) logo antes de uma ação sensível, como excluir a conta. */
