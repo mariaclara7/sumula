@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { AUTORIA, NOME_COMPETICAO, TEMPORADA } from '../config'
 import { Logo } from './Logo'
 import { Pagina } from './Pagina'
@@ -35,7 +36,12 @@ export function Rodape() {
       </Pagina>
       <Pagina>
         <div className="flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-cinza/20 py-4 font-mono text-[11px] text-cinza">
-          <span>{AUTORIA.nome ? `Feito por ${AUTORIA.nome}` : `© ${TEMPORADA} BraSúmula`}</span>
+          <span>
+            {AUTORIA.nome ? `Feito por ${AUTORIA.nome}` : `© ${TEMPORADA} BraSúmula`} ·{' '}
+            <Link to="/privacidade" className="underline hover:text-creme">
+              Privacidade
+            </Link>
+          </span>
           <span>
             Dados:{' '}
             <a href="https://www.football-data.org" target="_blank" rel="noreferrer" className="underline hover:text-creme">

@@ -17,6 +17,7 @@ import { PaginaEstatisticas } from './paginas/PaginaEstatisticas'
 import { PaginaEvolucao } from './paginas/PaginaEvolucao'
 import { PaginaJogos } from './paginas/PaginaJogos'
 import { PaginaNaoEncontrada } from './paginas/PaginaNaoEncontrada'
+import { PaginaPrivacidade } from './paginas/PaginaPrivacidade'
 import { PaginaSala } from './paginas/PaginaSala'
 import { PaginaSalas } from './paginas/PaginaSalas'
 import { PaginaSimulador } from './paginas/PaginaSimulador'
@@ -53,6 +54,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="criar-conta" element={<PaginaEntrar modo="criar" />} />
               <Route path="esqueci-senha" element={<PaginaEntrar modo="esqueci" />} />
               <Route path="conta" element={<PaginaConta />} />
+              <Route path="privacidade" element={<PaginaPrivacidade />} />
               <Route path="*" element={<PaginaNaoEncontrada />} />
             </Route>
           </Routes>

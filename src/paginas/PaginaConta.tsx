@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate, useSearchParams } from 'react-router'
+import { Link, Navigate, useSearchParams } from 'react-router'
 import { confirmarIdentidade, excluirConta, mudarNome, reenviarConfirmacao, sair } from '../conta/acoes'
 import { mensagemDeErro, useConta, type Usuario } from '../conta/conta'
 import { Aviso, BotaoEnviar, Campo, CampoSenha } from '../conta/Formulario'
+import { baixarMeusDados } from '../conta/meusDados'
 import { CAMPO } from '../conta/estilos'
 import { Carregando } from '../componentes/Estado'
 import { Pagina } from '../componentes/Pagina'
@@ -228,8 +229,12 @@ function Seguranca({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }
       <Rotulo>SESSÃO E SEGURANÇA</Rotulo>
       <p className="mt-3 text-sm leading-relaxed text-texto-2">
         A senha fica guardada só no Firebase, do Google, com criptografia. A BraSúmula guarda apenas o seu nome, o seu
-        time do coração e os seus palpites nas salas.
+        time do coração e os seus palpites nas salas.{' '}
+        <Link to="/privacidade" className="font-bold text-destaque hover:underline">
+          Política de Privacidade
+        </Link>
       </p>
+      <BaixarDados usuario={usuario} />
       <button
         type="button"
         onClick={async () => {
@@ -273,5 +278,35 @@ function Seguranca({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }
         )}
       </div>
     </div>
+  )
+}
+
+function BaixarDados({ usuario }: { usuario: Usuario }) {
+  const [baixando, setBaixando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  async function baixar() {
+    setErro(null)
+    setBaixando(true)
+    try {
+      await baixarMeusDados(usuario)
+    } catch {
+      setErro('Não foi possível juntar os seus dados agora. Tente de novo.')
+    }
+    setBaixando(false)
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={baixar}
+        disabled={baixando}
+        className="mt-4 w-full cursor-pointer border-2 border-texto bg-superficie px-[18px] py-3 text-sm font-extrabold hover:shadow-[3px_3px_0_var(--texto)] disabled:cursor-wait disabled:opacity-60"
+      >
+        {baixando ? 'Juntando os seus dados…' : 'Baixar meus dados'}
+      </button>
+      {erro && <Aviso tipo="erro">{erro}</Aviso>}
+    </>
   )
 }

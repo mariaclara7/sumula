@@ -70,7 +70,20 @@ export function PaginaEntrar({ modo }: { modo: Modo }) {
       </p>
       <p className="mt-3 max-w-[460px] text-xs leading-relaxed text-texto-2">
         A conta é opcional: todo o site funciona sem ela. A senha fica guardada só no Firebase, do Google, com
-        criptografia; a BraSúmula nunca vê nem guarda a sua senha.
+        criptografia; a BraSúmula nunca vê nem guarda a sua senha.{modo === 'criar' && ' Ao criar a conta, você concorda com a '}
+        {modo === 'criar' ? (
+          <Link to="/privacidade" className="font-bold text-destaque hover:underline">
+            Política de Privacidade
+          </Link>
+        ) : (
+          <>
+            {' '}
+            <Link to="/privacidade" className="font-bold text-destaque hover:underline">
+              Como cuidamos dos seus dados
+            </Link>
+          </>
+        )}
+        .
       </p>
     </Pagina>
   )
