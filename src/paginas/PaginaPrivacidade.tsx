@@ -5,7 +5,7 @@ import { Rotulo, TituloPagina } from '../componentes/TituloPagina'
 import { AUTORIA } from '../config'
 
 /** Data desta versão da política. Mudou o texto, muda a data. */
-const ATUALIZADA_EM = '1º de novembro de 2026'
+const ATUALIZADA_EM = '2 de novembro de 2026'
 const EMAIL = AUTORIA.links.find((l) => l.url.startsWith('mailto:'))?.url.replace('mailto:', '') ?? ''
 
 /** /privacidade: o que a BraSúmula guarda, por quê, com quem, por quanto tempo e os direitos de cada pessoa (LGPD). */
@@ -18,9 +18,9 @@ export function PaginaPrivacidade() {
       </p>
 
       <div className="mt-8 grid max-w-[920px] gap-4 md:grid-cols-3">
-        <Resumo titulo="Sem conta">Nenhum dado seu fica nos nossos servidores. As suas escolhas ficam só no seu navegador.</Resumo>
+        <Resumo titulo="Sem conta">Nada que identifique você fica nos nossos servidores. As suas escolhas ficam só no seu navegador.</Resumo>
         <Resumo titulo="Com conta">Guardamos só o necessário: nome, e-mail, time do coração e os palpites das salas.</Resumo>
-        <Resumo titulo="Sempre">Não vendemos dados, não mostramos anúncios e não usamos rastreadores. Você pode excluir tudo quando quiser.</Resumo>
+        <Resumo titulo="Sempre">Não vendemos dados, não mostramos anúncios e não usamos cookies de rastreamento. Você pode excluir tudo quando quiser.</Resumo>
       </div>
 
       <div className="mt-10 max-w-[720px] text-[15px] leading-[1.65]">
@@ -35,9 +35,15 @@ export function PaginaPrivacidade() {
         <Secao titulo="O que fica guardado">
           <h3 className="mt-4 font-black">Se você só usa o site, sem conta</h3>
           <p>
-            Nada sobre você fica nos nossos servidores. Algumas escolhas ficam guardadas <b>só no seu navegador</b> (o
-            chamado armazenamento local), para o site lembrar delas na próxima visita: o tema claro ou escuro, o time do
+            Nada que identifique você fica nos nossos servidores. Algumas escolhas ficam guardadas <b>só no seu navegador</b>{' '}
+            (o chamado armazenamento local), para o site lembrar delas na próxima visita: o tema claro ou escuro, o time do
             coração e os palpites do Simulador. Você apaga tudo limpando os dados do site no navegador.
+          </p>
+          <p className="mt-3">
+            Para saber quantas pessoas usam o site, contamos as visitas com o <b>Cloudflare Web Analytics</b>, que{' '}
+            <b>não usa cookies</b>, não guarda o seu endereço IP e não identifica você nem acompanha você em outros sites.
+            Ele registra só números gerais: quais páginas foram abertas, quanto tempo levaram para carregar, de qual site a
+            pessoa veio, o país e o tipo de aparelho e de navegador.
           </p>
           <h3 className="mt-5 font-black">Se você cria uma conta</h3>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
@@ -65,10 +71,11 @@ export function PaginaPrivacidade() {
             <li>Para as salas funcionarem: os seus amigos veem o seu nome e os seus palpites.</li>
             <li>Para lembrar o seu time do coração em qualquer aparelho.</li>
             <li>Para a segurança do site, como bloquear tentativas repetidas de adivinhar senhas (feito pelo Firebase).</li>
+            <li>Para entender, em números gerais e sem identificar ninguém, quais páginas são mais usadas e melhorar o site.</li>
           </ul>
           <p className="mt-3">
             Esses usos se baseiam na execução do serviço que você pediu ao criar a conta (art. 7º, V, da LGPD) e, no caso
-            da segurança, no legítimo interesse de proteger as contas (art. 7º, IX).
+            da segurança e da contagem anônima de visitas, no legítimo interesse de proteger as contas e melhorar o site (art. 7º, IX).
           </p>
         </Secao>
 
@@ -79,7 +86,8 @@ export function PaginaPrivacidade() {
               palpites. O seu e-mail nunca aparece nas salas.
             </li>
             <li>
-              <b>Google (Firebase)</b>, que cuida do login, e <b>Cloudflare</b>, que hospeda o site e o banco de dados.
+              <b>Google (Firebase)</b>, que cuida do login, e <b>Cloudflare</b>, que hospeda o site e o banco de dados e conta as
+              visitas.
               Eles tratam os dados só para prestar esses serviços. Os servidores deles podem ficar fora do Brasil; essa
               transferência é feita com as garantias previstas na LGPD (art. 33).
             </li>
